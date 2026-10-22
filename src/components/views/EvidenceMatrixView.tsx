@@ -585,6 +585,11 @@ export const EvidenceMatrixView: React.FC<EvidenceMatrixViewProps> = ({
                                     PDF
                                   </span>
                                 )}
+                                {(doc.isDocx || doc.encryptedPayload?.isDocx) && (
+                                  <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 text-[9px] font-extrabold tracking-wider">
+                                    DOCX
+                                  </span>
+                                )}
                                 <span>{doc.size}</span>
                               </span>
                               <span>•</span>
@@ -799,6 +804,11 @@ export const EvidenceMatrixView: React.FC<EvidenceMatrixViewProps> = ({
                           {doc.category}
                         </span>
                         <span>•</span>
+                        {(doc.isDocx || doc.encryptedPayload?.isDocx) && (
+                          <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 text-[9px] font-extrabold tracking-wider">
+                            DOCX
+                          </span>
+                        )}
                         <span>{doc.size}</span>
                       </div>
                     </div>

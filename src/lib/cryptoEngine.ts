@@ -13,6 +13,8 @@ export interface EncryptedPayload {
   classification: string;
   saltHex: string;
   isPdf?: boolean;
+  isDocx?: boolean;
+  docxUrl?: string;
   fileName?: string;
   mimeType?: string;
 }
@@ -54,7 +56,7 @@ export class RealCryptoEngine {
   static async encryptBinary(
     data: ArrayBuffer | Uint8Array,
     secretSeed: string,
-    metadata?: { isPdf?: boolean; fileName?: string; mimeType?: string; classification?: string }
+    metadata?: { isPdf?: boolean; isDocx?: boolean; docxUrl?: string; fileName?: string; mimeType?: string; classification?: string }
   ): Promise<EncryptedPayload> {
     const cryptoApi = this.getCrypto();
     const salt = cryptoApi.getRandomValues(new Uint8Array(16));
@@ -95,6 +97,8 @@ export class RealCryptoEngine {
       tagHex: this.bufToHex(salt.slice(0, 8)), // Attestation Tag representation
       classification: metadata?.classification || 'IMMUNITY_SEALED_AES_256_GCM',
       isPdf: metadata?.isPdf ?? false,
+      isDocx: metadata?.isDocx ?? false,
+      docxUrl: metadata?.docxUrl,
       fileName: metadata?.fileName,
       mimeType: metadata?.mimeType || (metadata?.isPdf ? 'application/pdf' : undefined)
     };

@@ -8,6 +8,9 @@ export interface DecryptionResult {
   content?: string;
   pdfBytes?: Uint8Array;
   isPdf?: boolean;
+  isDocx?: boolean;
+  docxBytes?: Uint8Array;
+  docxUrl?: string;
   fileName?: string;
   errorCode?: 'ADMIN_NO_DATA_AUTHORITY' | 'QUORUM_REQUIRED' | 'UNAUTHORIZED_OPPONENT' | 'WEBCRYPTO_OPERATION_ERROR';
   errorMessage?: string;
@@ -108,6 +111,21 @@ export class TideCloakMatterService {
     let decryptedText = document.decryptedContent;
     let decryptedPdfBytes: Uint8Array | undefined;
     let isPdfDoc = document.isPdf || document.encryptedPayload?.isPdf || false;
+    let isDocxDoc = document.isDocx || false;
+    let decryptedDocxBytes: Uint8Array | undefined;
+    const docxUrl = document.docxUrl;
+
+    if (isDocxDoc && docxUrl && typeof window !== 'undefined') {
+      try {
+        const resp = await fetch(docxUrl);
+        if (resp.ok) {
+          const ab = await resp.arrayBuffer();
+          decryptedDocxBytes = new Uint8Array(ab);
+        }
+      } catch (err) {
+        console.warn('Could not fetch docx file:', err);
+      }
+    }
 
     if (document.encryptedPayload) {
       const decryptResult = await tidecloak.doDecrypt(document.encryptedPayload, activeSignatures);
@@ -127,10 +145,13 @@ export class TideCloakMatterService {
     const latencyMs = Math.round(performance.now() - startTime);
     return {
       success: true,
-      content: decryptedText,
+      content: decryptedText || document.summary,
       pdfBytes: decryptedPdfBytes,
       isPdf: isPdfDoc,
-      fileName: document.fileName || document.encryptedPayload?.fileName,
+      isDocx: isDocxDoc,
+      docxBytes: decryptedDocxBytes,
+      docxUrl,
+      fileName: document.fileName || document.docxFileName || document.encryptedPayload?.fileName,
       technicalDetails: `[FORSETI_ATTESTED_ALLOW] Identity role '${currentUser.role}' granted access under ${forsetiEvaluation.invariantTriggered}. Ephemeral key synthesized and verified via WebCrypto AES-256-GCM in ${latencyMs}ms.`,
       latencyMs,
       algorithm: 'AES-256-GCM (Hardware Enclave)',

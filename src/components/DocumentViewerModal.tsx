@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MatterDocument, UserProfile } from '../types/matter';
 import { DecryptionResult } from '../lib/tidecloak';
 import { LegalSeal } from './LegalSeal';
 import { useLanguage } from '../context/LanguageContext';
 import { LegalBadge } from './common/LegalBadge';
 import { LegalCard } from './common/LegalCard';
+import * as docxPreview from 'docx-preview';
 
 interface DocumentViewerModalProps {
   document: MatterDocument | null;
@@ -26,7 +27,53 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
   const [timeLeft, setTimeLeft] = useState(60);
   const [isKeyBurned, setIsKeyBurned] = useState(false);
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
-  const [activeViewTab, setActiveViewTab] = useState<'pdf' | 'cards'>('pdf');
+  const [activeViewTab, setActiveViewTab] = useState<'docx' | 'pdf' | 'cards'>('docx');
+  const [isDocxRendering, setIsDocxRendering] = useState(false);
+  const docxContainerRef = useRef<HTMLDivElement>(null);
+
+  // Đồng bộ view tab mặc định khi kết quả giải mã thay đổi
+  useEffect(() => {
+    if (result?.isDocx) {
+      setActiveViewTab('docx');
+    } else if (result?.isPdf) {
+      setActiveViewTab('pdf');
+    } else {
+      setActiveViewTab('docx');
+    }
+  }, [result?.isDocx, result?.isPdf, document?.id]);
+
+  // Kết xuất văn bản Word .docx trực tiếp lên màn hình qua docx-preview
+  useEffect(() => {
+    if (result?.success && result?.isDocx && !isKeyBurned && docxContainerRef.current) {
+      setIsDocxRendering(true);
+      const container = docxContainerRef.current;
+      container.innerHTML = '';
+
+      const loadAndRender = async () => {
+        try {
+          let data: ArrayBuffer | Uint8Array | null = result.docxBytes || null;
+          if (!data && result.docxUrl) {
+            const resp = await fetch(result.docxUrl);
+            data = await resp.arrayBuffer();
+          }
+          if (data && docxContainerRef.current) {
+            await docxPreview.renderAsync(data, docxContainerRef.current, undefined, {
+              className: 'docx-preview-paper',
+              inWrapper: false,
+              ignoreWidth: false,
+              ignoreHeight: false
+            });
+          }
+        } catch (err) {
+          console.error('Lỗi kết xuất văn bản docx:', err);
+        } finally {
+          setIsDocxRendering(false);
+        }
+      };
+
+      loadAndRender();
+    }
+  }, [result?.success, result?.isDocx, result?.docxBytes, result?.docxUrl, isKeyBurned, activeViewTab]);
 
   // Tạo và quản lý Blob Object URL cho File PDF thật đã giải mã
   useEffect(() => {
@@ -78,9 +125,15 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
     if (result?.pdfBytes) {
       result.pdfBytes.fill(0); // Zeroize volatile memory bytes
     }
+    if (result?.docxBytes) {
+      result.docxBytes.fill(0);
+    }
     if (pdfBlobUrl) {
       URL.revokeObjectURL(pdfBlobUrl);
       setPdfBlobUrl(null);
+    }
+    if (docxContainerRef.current) {
+      docxContainerRef.current.innerHTML = '';
     }
   };
 
@@ -88,9 +141,15 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
     if (result?.pdfBytes) {
       result.pdfBytes.fill(0);
     }
+    if (result?.docxBytes) {
+      result.docxBytes.fill(0);
+    }
     if (pdfBlobUrl) {
       URL.revokeObjectURL(pdfBlobUrl);
       setPdfBlobUrl(null);
+    }
+    if (docxContainerRef.current) {
+      docxContainerRef.current.innerHTML = '';
     }
     onClose();
   };
@@ -357,8 +416,174 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
               {/* Only show decrypted content if key is NOT burned */}
               {!isKeyBurned && (
                 <>
-                  {/* PDF Document Viewer (When result has pdfBytes / pdfBlobUrl) */}
-                  {result.isPdf && pdfBlobUrl ? (
+                  {/* CASE A: DOCX Document Viewer (.docx render directly on screen via docx-preview) */}
+                  {result.isDocx ? (
+                    <div className="space-y-3">
+                      {/* Document Sub-Header & Controls */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 px-4 rounded-xl bg-slate-50 border border-slate-200 text-xs gap-2">
+                        <div className="flex items-center gap-2.5 truncate">
+                          <span className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
+                            <span className="material-symbols-outlined text-[20px]">description</span>
+                          </span>
+                          <div className="truncate">
+                            <span className="font-bold text-slate-800 text-xs sm:text-sm truncate block">
+                              {result.fileName || document.title}
+                            </span>
+                            <span className="text-[10px] text-slate-500 font-mono">
+                              Microsoft Word (.docx) • Enclave Verified • {result.latencyMs || 12}ms
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          {/* If Exhibit B or C2 evidence, allow switching between Word view and Clinical Breakdown Cards */}
+                          {(document.id === 'doc_03' || document.id === 'doc_02' || document.dataClass === 'C2') && (
+                            <div className="flex items-center p-0.5 rounded-lg bg-slate-200 text-slate-700 text-xs font-semibold">
+                              <button
+                                type="button"
+                                onClick={() => setActiveViewTab('docx')}
+                                className={`px-2.5 py-1 rounded-md transition cursor-pointer ${
+                                  activeViewTab === 'docx' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                                }`}
+                              >
+                                {lang === 'vi' ? 'Xem Word (.docx)' : 'Word View'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setActiveViewTab('cards')}
+                                className={`px-2.5 py-1 rounded-md transition cursor-pointer ${
+                                  activeViewTab === 'cards' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                                }`}
+                              >
+                                {lang === 'vi' ? 'Tóm tắt giám định' : 'Clinical Summary'}
+                              </button>
+                            </div>
+                          )}
+
+                          {result.docxUrl && (
+                            <a
+                              href={result.docxUrl}
+                              download={result.fileName || `${document.id}.docx`}
+                              className="px-3 py-1.5 rounded-lg bg-[#1E3A8A] hover:bg-[#172554] text-white font-semibold text-xs flex items-center gap-1 shadow-2xs transition cursor-pointer"
+                              title="Download decrypted attested Word .docx document"
+                            >
+                              <span className="material-symbols-outlined text-[14px]">download</span>
+                              <span>{lang === 'vi' ? 'Tải DOCX' : 'Download DOCX'}</span>
+                            </a>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Display either rendered DOCX or Clinical Cards */}
+                      {activeViewTab === 'docx' ? (
+                        <div className="rounded-xl border border-slate-200 overflow-hidden shadow-inner bg-[#525659] flex flex-col relative">
+                          {isDocxRendering && (
+                            <div className="p-8 text-center text-white text-xs font-medium flex items-center justify-center gap-2">
+                              <span className="material-symbols-outlined animate-spin text-[20px]">progress_activity</span>
+                              <span>{lang === 'vi' ? 'Đang kết xuất văn bản Word (.docx)...' : 'Rendering Word document on screen...'}</span>
+                            </div>
+                          )}
+                          <div
+                            ref={docxContainerRef}
+                            className="docx-viewer-container w-full min-h-[460px] max-h-[560px] overflow-y-auto"
+                          />
+                        </div>
+                      ) : (
+                        /* RENDER CLINICAL FINDINGS CARDS */
+                        <div className="space-y-4 border border-[#E2E8F0] rounded-2xl p-5 bg-white shadow-xs relative overflow-hidden">
+                          <div className="absolute right-0 top-0 opacity-5 pointer-events-none">
+                            <LegalSeal className="w-56 h-56" />
+                          </div>
+                          <div className="flex flex-col gap-1 relative z-10">
+                            <p className="text-[11px] uppercase font-bold tracking-wider text-[#B45309]">
+                              SEALED LITIGATION MATTER #2026-CV-04421 • CONFIDENTIAL FORENSIC EXHIBIT
+                            </p>
+                            <div className="h-0.5 w-16 bg-[#1E3A8A] my-1" />
+                            <h2 className="text-lg sm:text-xl font-bold text-[#0F172A] tracking-tight">
+                              {t.independentForensicReport}
+                            </h2>
+                            <p className="text-xs text-[#475569]">
+                              {t.forensicPreparedBy}
+                            </p>
+                          </div>
+
+                          <div className="flex items-center justify-between p-3 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] text-xs text-[#0F172A] flex-wrap gap-2">
+                            <div className="flex items-center gap-1.5 font-mono">
+                              <span className="material-symbols-outlined text-[16px] text-[#0F766E]">lock</span>
+                              <span className="font-semibold">{t.checksumLabel}</span>
+                              <span className="text-[#64748B]">e4b77f98...8ad8e (Hardware Enclave Verified)</span>
+                            </div>
+                            <LegalBadge variant="teal" size="sm">
+                              {t.deterministicVerified}
+                            </LegalBadge>
+                          </div>
+
+                          {/* 3 Structured Clinical Finding Cards */}
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="font-bold text-xs uppercase tracking-wider text-[#0F172A]">
+                                {t.clinicalFindingsHeader}
+                              </h4>
+                              <span className="text-[11px] text-[#64748B] font-mono">Protocol Med-Forensic v4.2</span>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                              <LegalCard variant="muted" className="p-3.5 flex flex-col justify-between gap-2 shadow-2xs">
+                                <div>
+                                  <LegalBadge variant="navy" size="sm">
+                                    {t.physicalFindings}
+                                  </LegalBadge>
+                                  <p className="text-xs text-[#475569] leading-relaxed mt-2">
+                                    {t.physicalFindingsDesc}
+                                  </p>
+                                </div>
+                                <div className="pt-2 border-t border-[#E2E8F0] flex items-center justify-between text-[11px]">
+                                  <span className="text-[#64748B]">{t.forensicSeverity}</span>
+                                  <span className="font-bold text-[#B45309]">{t.category3Acute}</span>
+                                </div>
+                              </LegalCard>
+
+                              <LegalCard variant="muted" className="p-3.5 flex flex-col justify-between gap-2 shadow-2xs">
+                                <div>
+                                  <LegalBadge variant="amber" size="sm">
+                                    {t.toxicologyAnalysis}
+                                  </LegalBadge>
+                                  <p className="text-xs text-[#475569] leading-relaxed mt-2">
+                                    {t.toxicologyDesc}
+                                  </p>
+                                </div>
+                                <div className="pt-2 border-t border-[#E2E8F0] flex items-center justify-between text-[11px]">
+                                  <span className="text-[#64748B]">{t.assayResult}</span>
+                                  <span className="font-bold text-[#991B1B]">{t.positiveConfirmative}</span>
+                                </div>
+                              </LegalCard>
+
+                              <LegalCard variant="muted" className="p-3.5 flex flex-col justify-between gap-2 shadow-2xs">
+                                <div>
+                                  <LegalBadge variant="teal" size="sm">
+                                    {t.psychologicalAssessment}
+                                  </LegalBadge>
+                                  <p className="text-xs text-[#475569] leading-relaxed mt-2">
+                                    {t.psychologicalDesc}
+                                  </p>
+                                </div>
+                                <div className="pt-2 border-t border-[#E2E8F0] flex items-center justify-between text-[11px]">
+                                  <span className="text-[#64748B]">{t.diagnosticScale}</span>
+                                  <span className="font-bold text-[#1E3A8A]">{t.dsm5Confirmed}</span>
+                                </div>
+                              </LegalCard>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Technical Execution Log */}
+                      <div className="p-3 rounded-xl bg-[#F8FAFC] border border-[#BFDBFE] text-xs font-mono text-[#1E3A8A] flex items-center gap-2 shadow-2xs">
+                        <span className="material-symbols-outlined text-[16px] text-[#1E3A8A]">terminal</span>
+                        <span className="text-[#1E3A8A] font-semibold">{result.technicalDetails}</span>
+                      </div>
+                    </div>
+                  ) : result.isPdf && pdfBlobUrl ? (
                     <div className="space-y-3">
                       {/* Document Sub-Header & Controls */}
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 px-4 rounded-xl bg-slate-50 border border-slate-200 text-xs gap-2">

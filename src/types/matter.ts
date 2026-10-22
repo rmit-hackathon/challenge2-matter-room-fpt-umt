@@ -41,6 +41,8 @@ export interface EncryptedPayload {
   tagHex: string;
   classification: string;
   isPdf?: boolean;
+  isDocx?: boolean;
+  docxUrl?: string;
   fileName?: string;
   mimeType?: string;
 }
@@ -54,6 +56,21 @@ export interface UserProfile {
   avatar: string;
   hasDataAuthority: boolean; // Admin = FALSE (Zero Data Authority), Nạn nhân & Luật sư & Người giám hộ = TRUE
   roleDescription: string;
+
+  // Extended Profile & Legal Credentials (Facebook-style Profile Edit)
+  legalCredential?: string;      // Bar ID, Court Docket Protective Order, Guardianship Order
+  jurisdiction?: string;         // Assigned Court / Legal Jurisdiction
+  appointmentDate?: string;      // Date appointed or enrolled
+  secureEmail?: string;          // E2EE verified communication address
+  securePhone?: string;          // Encrypted phone / hotline / whisper relay
+  officeAddress?: string;        // Physical address or Sealed status
+  privacyScope?: string;         // Privacy level descriptor
+  bio?: string;                  // Personal statement / Role mission summary
+  did?: string;                  // Decentralized DID
+  publicKey?: string;            // Enclave public key
+  quorumWeight?: string;         // Quorum voting authority description
+  dataAccessScope?: string;      // C0, C1, C2 scope
+  enclaveHardwareState?: string; // Enclave hardware isolation state
 }
 
 export interface MatterDocument {
@@ -70,6 +87,9 @@ export interface MatterDocument {
   summary: string;
   encryptedPayload?: EncryptedPayload;
   isPdf?: boolean;
+  isDocx?: boolean;
+  docxUrl?: string;
+  docxFileName?: string;
   fileName?: string;
   mimeType?: string;
   crudPolicy?: CrudPolicy;

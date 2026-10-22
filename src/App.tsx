@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { UserRole, NavTab, MatterDocument, QuorumRequest, AuditLogEntry } from './types/matter';
+import { UserRole, UserProfile, NavTab, MatterDocument, QuorumRequest, AuditLogEntry } from './types/matter';
 import { MOCK_USERS, MOCK_DOCUMENTS, INITIAL_QUORUM_REQUESTS, INITIAL_AUDIT_LOGS } from './data/mockMatterData';
 import { TideCloakMatterService, DecryptionResult } from './lib/tidecloak';
 import { tidecloak } from './lib/tidecloakSdk';
@@ -50,13 +50,22 @@ export const App: React.FC = () => {
   // Left Sidebar Collapsible State
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
-  const currentUser = MOCK_USERS[currentUserRole] || MOCK_USERS.LEAD_COUNSEL;
+  // Dynamic user profiles state (supports in-modal editing like Facebook profile edit)
+  const [userProfiles, setUserProfiles] = useState<Record<string, UserProfile>>(MOCK_USERS);
+  const currentUser = userProfiles[currentUserRole] || userProfiles.LEAD_COUNSEL;
   const pendingQuorumCount = quorumRequests.filter(q => q.status === 'PENDING').length;
+
+  const handleUpdateUser = (updatedUser: UserProfile) => {
+    setUserProfiles(prev => ({
+      ...prev,
+      [updatedUser.role]: updatedUser
+    }));
+  };
 
   const handleSelectRole = (role: UserRole) => {
     setCurrentUserRole(role);
-    if (MOCK_USERS[role]) {
-      tidecloak.setRole(role, MOCK_USERS[role].id);
+    if (userProfiles[role]) {
+      tidecloak.setRole(role, userProfiles[role].id);
     }
 
     // If switching to Admin persona, automatically switch to Admin Console view
@@ -359,7 +368,7 @@ export const App: React.FC = () => {
       {/* Top Navigation Bar with Persona & Enclave Status */}
       <Navbar
         currentUser={currentUser}
-        allUsers={MOCK_USERS}
+        allUsers={userProfiles}
         onSelectRole={handleSelectRole}
         onOpenEnclaveInspector={() => setIsEnclaveInspectorOpen(true)}
         onOpenProfileSettings={() => setIsProfileModalOpen(true)}
@@ -378,7 +387,7 @@ export const App: React.FC = () => {
           currentUser={currentUser}
           isCollapsed={isSidebarCollapsed}
           onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
-          allUsers={MOCK_USERS}
+          allUsers={userProfiles}
           onSelectRole={handleSelectRole}
         />
 
@@ -520,8 +529,9 @@ export const App: React.FC = () => {
         isOpen={isProfileModalOpen}
         onClose={() => setIsProfileModalOpen(false)}
         currentUser={currentUser}
-        allUsers={MOCK_USERS}
+        allUsers={userProfiles}
         onSelectRole={handleSelectRole}
+        onUpdateUser={handleUpdateUser}
       />
 
     </div>

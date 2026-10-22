@@ -61,31 +61,40 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
     setIsSealing(true);
 
     try {
-      let rawPdfBytes: Uint8Array | ArrayBuffer;
-      let finalFileName = selectedFile ? selectedFile.name : `${title.trim().replace(/\s+/g, '_')}.pdf`;
+      let rawBytes: Uint8Array | ArrayBuffer;
+      const isDocxFile = selectedFile ? selectedFile.name.toLowerCase().endsWith('.docx') : false;
+      const defaultExt = isDocxFile ? '.docx' : '.pdf';
+      let finalFileName = selectedFile ? selectedFile.name : `${title.trim().replace(/\s+/g, '_')}${defaultExt}`;
       let sizeStr = selectedFile 
-        ? `${(selectedFile.size / 1024).toFixed(1)} KB (PDF)`
+        ? `${(selectedFile.size / 1024).toFixed(1)} KB (${isDocxFile ? 'DOCX' : 'PDF'})`
         : '2.4 KB (PDF)';
 
       const securityLevel: SecurityLevel = 
         dataClass === 'C0' ? 'LEVEL_1_ROUTINE' :
         dataClass === 'C1' ? 'LEVEL_2_SENSITIVE' : 'LEVEL_3_HIGHLY_SENSITIVE';
 
+      let docxObjectUrl: string | undefined;
+
       if (selectedFile) {
-        rawPdfBytes = await selectedFile.arrayBuffer();
+        rawBytes = await selectedFile.arrayBuffer();
+        if (isDocxFile) {
+          docxObjectUrl = URL.createObjectURL(new Blob([rawBytes], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }));
+        }
       } else {
-        rawPdfBytes = buildClientPdf(title.trim(), summary.trim() || 'Confidential disclosure sealed under Emergent Authority.', {
+        rawBytes = buildClientPdf(title.trim(), summary.trim() || 'Confidential disclosure sealed under Emergent Authority.', {
           securityLevel,
           author: 'Sovereign Litigant'
         });
-        sizeStr = `${(rawPdfBytes.byteLength / 1024).toFixed(1)} KB (PDF)`;
+        sizeStr = `${(rawBytes.byteLength / 1024).toFixed(1)} KB (PDF)`;
       }
 
       const survivorSeed = RealCryptoEngine.getRoleSeed('SURVIVOR_CLIENT') || 'TIDE_EPHEMERAL_KEY_SLOT_SURVIVOR_SOVEREIGNTY_0x71a2';
-      const payload = await RealCryptoEngine.encryptBinary(rawPdfBytes, survivorSeed, {
-        isPdf: true,
+      const payload = await RealCryptoEngine.encryptBinary(rawBytes, survivorSeed, {
+        isPdf: !isDocxFile,
+        isDocx: isDocxFile,
+        docxUrl: docxObjectUrl,
         fileName: finalFileName,
-        mimeType: 'application/pdf',
+        mimeType: isDocxFile ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'application/pdf',
         classification: dataClass
       });
 
@@ -120,12 +129,15 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
         securityLevel,
         size: sizeStr,
         uploadedAt: new Date().toISOString().substring(0, 16).replace('T', ' '),
-        encryptedHash: `${randomHash} (${lang === 'vi' ? 'Đã niêm phong PDF' : 'PDF Enclave Sealed'})`,
-        isPdf: true,
+        encryptedHash: `${randomHash} (${isDocxFile ? 'DOCX Enclave Sealed' : (lang === 'vi' ? 'Đã niêm phong PDF' : 'PDF Enclave Sealed')})`,
+        isPdf: !isDocxFile,
+        isDocx: isDocxFile,
+        docxUrl: docxObjectUrl,
+        docxFileName: isDocxFile ? finalFileName : undefined,
         fileName: finalFileName,
-        mimeType: 'application/pdf',
+        mimeType: isDocxFile ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'application/pdf',
         encryptedPayload: payload,
-        summary: summary.trim() || (lang === 'vi' ? 'Hồ sơ PDF nhị phân được tải lên và mã hóa WebCrypto.' : 'Authentic PDF binary encrypted client-side via WebCrypto AES-GCM.'),
+        summary: summary.trim() || (isDocxFile ? 'Văn bản Word (.docx) được tải lên và mã hóa WebCrypto AES-GCM.' : (lang === 'vi' ? 'Hồ sơ PDF nhị phân được tải lên và mã hóa WebCrypto.' : 'Authentic PDF binary encrypted client-side via WebCrypto AES-GCM.')),
         crudPolicy
       };
 
@@ -199,7 +211,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".pdf"
+                accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 className="hidden"
                 onChange={handleFileChange}
               />
@@ -207,12 +219,20 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
               {selectedFile ? (
                 <div className="flex items-center gap-3 w-full justify-between px-2">
                   <div className="flex items-center gap-2.5 truncate">
-                    <div className="w-8 h-8 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center shrink-0">
-                      <span className="material-symbols-outlined text-[20px]">picture_as_pdf</span>
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                      selectedFile.name.toLowerCase().endsWith('.docx')
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'bg-rose-100 text-rose-700'
+                    }`}>
+                      <span className="material-symbols-outlined text-[20px]">
+                        {selectedFile.name.toLowerCase().endsWith('.docx') ? 'description' : 'picture_as_pdf'}
+                      </span>
                     </div>
                     <div className="text-left truncate">
                       <p className="font-bold text-slate-800 text-xs truncate max-w-xs">{selectedFile.name}</p>
-                      <p className="text-[10px] text-slate-500 font-mono">{(selectedFile.size / 1024).toFixed(1)} KB • Raw PDF</p>
+                      <p className="text-[10px] text-slate-500 font-mono">
+                        {(selectedFile.size / 1024).toFixed(1)} KB • {selectedFile.name.toLowerCase().endsWith('.docx') ? 'Word DOCX' : 'Raw PDF'}
+                      </p>
                     </div>
                   </div>
                   <button
@@ -234,10 +254,10 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
                   </div>
                   <div>
                     <p className="font-semibold text-slate-700 text-xs">
-                      {lang === 'vi' ? 'Kéo thả file PDF vào đây hoặc bấm để chọn' : 'Drag & drop a PDF file here, or click to browse'}
+                      {lang === 'vi' ? 'Kéo thả file Word (.docx) hoặc PDF vào đây hoặc bấm để chọn' : 'Drag & drop a DOCX or PDF file here, or click to browse'}
                     </p>
                     <p className="text-[11px] text-slate-400 mt-0.5">
-                      {lang === 'vi' ? 'Mã hóa nhị phân bằng WebCrypto AES-GCM' : 'Binary encrypted via WebCrypto AES-GCM in RAM'}
+                      {lang === 'vi' ? 'Mã hóa nhị phân an toàn bằng WebCrypto AES-GCM' : 'Binary encrypted via WebCrypto AES-GCM in RAM'}
                     </p>
                   </div>
                 </>

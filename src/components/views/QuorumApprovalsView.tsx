@@ -3,6 +3,7 @@ import { QuorumRequest, UserProfile, MatterDocument } from '../../types/matter';
 import { useLanguage } from '../../context/LanguageContext';
 import { LegalBadge } from '../common/LegalBadge';
 import { LegalCard } from '../common/LegalCard';
+import { SegmentedRing, RingSlot } from '../common/Charts';
 
 interface QuorumApprovalsViewProps {
   quorumRequests: QuorumRequest[];
@@ -58,6 +59,18 @@ export const QuorumApprovalsView: React.FC<QuorumApprovalsViewProps> = ({
   const hasSurvivorSigned = activeReq.approvals.some(a => a.signerRole === 'SURVIVOR_CLIENT');
   const hasCounselSigned = activeReq.approvals.some(a => a.signerRole === 'LEAD_COUNSEL');
   const hasGuardianSigned = activeReq.approvals.some(a => a.signerRole === 'GUARDIAN');
+
+  const ringSlots: RingSlot[] = [
+    { key: 'SURVIVOR_CLIENT', label: lang === 'vi' ? 'Nạn nhân' : 'Survivor', state: hasSurvivorSigned ? 'signed' : 'pending' },
+    { key: 'LEAD_COUNSEL', label: lang === 'vi' ? 'Luật sư' : 'Counsel', state: hasCounselSigned ? 'signed' : 'pending' },
+    {
+      key: 'GUARDIAN',
+      label: lang === 'vi' ? 'Giám hộ' : 'Guardian',
+      state: isGuardianConflicted ? 'excluded' : hasGuardianSigned ? 'signed' : 'pending',
+    },
+  ];
+  const signedCount = ringSlots.filter(sl => sl.state === 'signed').length;
+  const remainingCount = Math.max(effectiveThreshold - signedCount, 0);
 
   const targetDoc = documents.find(d => d.id === activeReq.targetDocumentId);
 
@@ -138,22 +151,11 @@ export const QuorumApprovalsView: React.FC<QuorumApprovalsViewProps> = ({
               <div>
                 <div className="flex items-center gap-2.5 flex-wrap">
                   <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A] tracking-tight">
-                    {lang === 'vi' ? 'Hội đồng Quorum Ký duyệt Dữ liệu C2 (All-Keyholders)' : 'All-Keyholders Quorum Escrow (C2)'}
+                    {lang === 'vi' ? 'Quorum ký duyệt dữ liệu C2' : 'C2 Quorum Approval'}
                   </h1>
-                  {isApproved ? (
-                    <LegalBadge variant="teal" dot size="sm">
-                      {lang === 'vi' ? `Quorum Hoàn tất (${activeReq.approvals.length}/${effectiveThreshold})` : `Quorum Complete (${activeReq.approvals.length}/${effectiveThreshold})`}
-                    </LegalBadge>
-                  ) : (
-                    <LegalBadge variant="amber" dot pulse size="sm">
-                      {lang === 'vi' ? `Đang chờ ký duyệt (${activeReq.approvals.length}/${effectiveThreshold})` : `Pending Signatures (${activeReq.approvals.length}/${effectiveThreshold})`}
-                    </LegalBadge>
-                  )}
                 </div>
-                <p className="text-sm text-[#475569] mt-1 font-normal max-w-2xl leading-relaxed">
-                  {lang === 'vi'
-                    ? 'Quy tắc Brainstorm 2.0: Mọi hồ sơ C2 bắt buộc phải được đồng thuận từ TẤT CẢ các bên giữ khóa (Nạn nhân, Luật sư, Người giám hộ) trước khi giải mã.'
-                    : 'Brainstorm 2.0 Policy: C2 Sensitive records mathematically require unanimous consent from ALL keyholders before key synthesis.'}
+                <p className="text-sm text-[#475569] mt-1">
+                  {lang === 'vi' ? 'Cần đồng thuận của tất cả các bên giữ khóa.' : 'Unanimous consent of all keyholders required.'}
                 </p>
               </div>
             </div>
@@ -165,98 +167,62 @@ export const QuorumApprovalsView: React.FC<QuorumApprovalsViewProps> = ({
               <span className="material-symbols-outlined text-[22px] shrink-0 mt-0.5">gpp_bad</span>
               <div className="space-y-1 text-xs">
                 <span className="font-bold uppercase tracking-wider block">
-                  {lang === 'vi' ? '🚨 NGOẠI LỆ RULE 4 ĐANG ĐƯỢC THỰC THI (BẢNG 5 - BRAINSTORM 2.0)' : '🚨 EXCEPTION RULE 4 ACTIVE (TABLE 5)'}
+                  {lang === 'vi' ? 'Ngoại lệ 4 đang hiệu lực' : 'Exception 4 active'}
                 </span>
                 <p className="leading-relaxed">
                   {lang === 'vi'
-                    ? 'Có báo cáo nghi ngờ Người giám hộ (Sarah Jenkins) có xung đột lợi ích hoặc hành vi bạo hành. Hệ thống đã cách ly tài khoản giám hộ khỏi luồng phê duyệt, ngưỡng Quorum tự động hạ xuống 2/2 giữa Thân chủ và Luật sư.'
-                    : 'Guardian Sarah Jenkins is flagged for potential abuse conflict. Safeguarding exception active: Guardian removed from approval chain, threshold adjusted to 2-of-2 (Survivor + Counsel).'}
+                    ? 'Người giám hộ bị loại khỏi luồng duyệt. Ngưỡng Quorum hạ xuống 2/2 (Nạn nhân + Luật sư).'
+                    : 'Guardian removed from approval chain. Threshold is now 2-of-2 (Survivor + Counsel).'}
                 </p>
               </div>
             </div>
           )}
 
-          {/* 2. Target Evidence Manifest */}
-          <div className="bg-[#F8FAFC] rounded-xl p-4 sm:p-5 flex flex-col gap-3 border border-[#E2E8F0]">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <span className="text-xs uppercase tracking-wider font-bold text-[#475569] flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-[17px] text-[#1E3A8A]">description</span>
-                <span>{t.targetEvidenceManifest}</span>
-              </span>
-              <span className="font-mono text-xs text-[#475569] bg-white px-2.5 py-0.5 rounded border border-[#E2E8F0]">
-                SHA-256: 4b901a...f89c02 (C2 Sensitive)
-              </span>
+          {/* 2. Target evidence: one compact strip */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-[#E2E8F0] rounded-xl overflow-hidden border border-[#E2E8F0]">
+            <div className="bg-[#F8FAFC] p-3.5">
+              <span className="text-[10px] uppercase font-bold text-[#64748B]">{t.targetEvidence}</span>
+              <p className="font-semibold text-sm text-[#0F172A] mt-1 leading-snug">Exhibit B</p>
+              <span className="text-xs text-[#475569] mt-0.5 block">24.5 MB &middot; PDF</span>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {/* Card 1: Target Evidence */}
-              <LegalCard variant="surface" className="p-3.5 flex flex-col justify-between shadow-2xs">
-                <div>
-                  <span className="text-[10px] uppercase font-bold text-[#64748B]">
-                    {t.targetEvidence}
-                  </span>
-                  <p className="font-semibold text-xs sm:text-sm text-[#0F172A] mt-1 leading-snug">
-                    Exhibit B: {lang === 'vi' ? 'Giám định Thương tật Y khoa & Độc chất học' : 'Forensic Trauma Evaluation'}
-                  </p>
-                </div>
-                <div className="mt-2.5 flex items-center gap-1 text-[#475569] bg-[#F1F5F9] px-2 py-0.5 rounded border border-[#E2E8F0] text-xs font-medium w-fit">
-                  <span className="material-symbols-outlined text-[14px]">attachment</span>
-                  <span>24.5 MB • PDF</span>
-                </div>
-              </LegalCard>
-
-              {/* Card 2: Beneficiary */}
-              <LegalCard variant="surface" className="p-3.5 flex flex-col justify-between shadow-2xs">
-                <div>
-                  <span className="text-[10px] uppercase font-bold text-[#64748B]">
-                    {t.beneficiary}
-                  </span>
-                  <p className="font-semibold text-xs sm:text-sm text-[#0F172A] mt-1 leading-snug">
-                    Elena Howard, Esq.
-                  </p>
-                  <span className="text-xs text-[#475569] mt-0.5 block">
-                    {lang === 'vi' ? 'Luật sư Trưởng Thụ lý Vụ án' : 'Lead Counsel & Litigator'}
-                  </span>
-                </div>
-                <div className="mt-2.5">
-                  <LegalBadge variant="teal" size="sm" icon="verified">
-                    {lang === 'vi' ? 'Đã xác thực danh tính' : 'Identity Verified'}
-                  </LegalBadge>
-                </div>
-              </LegalCard>
-
-              {/* Card 3: Purpose & Scope */}
-              <LegalCard variant="surface" className="p-3.5 flex flex-col justify-between shadow-2xs">
-                <div>
-                  <span className="text-[10px] uppercase font-bold text-[#64748B]">
-                    {lang === 'vi' ? 'MỤC ĐÍCH & PHẠM VI' : 'PURPOSE & SCOPE'}
-                  </span>
-                  <p className="font-semibold text-xs sm:text-sm text-[#0F172A] mt-1 leading-snug">
-                    {lang === 'vi' ? 'Thẩm định thương tật làm chứng trước Tòa' : 'Court Evidentiary Verification'}
-                  </p>
-                  <span className="text-xs text-[#475569] mt-0.5 block">
-                    {lang === 'vi' ? 'Theo lệnh bảo vệ vụ án' : 'Under Protective Seal'}
-                  </span>
-                </div>
-                <div className="mt-2.5">
-                  <LegalBadge variant="navy" size="sm" icon="lock">
-                    {lang === 'vi' ? 'Khóa tự hủy sau 60s' : '60s Auto-Burn Key'}
-                  </LegalBadge>
-                </div>
-              </LegalCard>
+            <div className="bg-[#F8FAFC] p-3.5">
+              <span className="text-[10px] uppercase font-bold text-[#64748B]">{t.beneficiary}</span>
+              <p className="font-semibold text-sm text-[#0F172A] mt-1 leading-snug">Elena Howard, Esq.</p>
+              <span className="text-xs text-[#475569] mt-0.5 block">{lang === 'vi' ? 'Luật sư trưởng' : 'Lead Counsel'}</span>
+            </div>
+            <div className="bg-[#F8FAFC] p-3.5">
+              <span className="text-[10px] uppercase font-bold text-[#64748B]">{lang === 'vi' ? 'Mục đích' : 'Purpose'}</span>
+              <p className="font-semibold text-sm text-[#0F172A] mt-1 leading-snug">{lang === 'vi' ? 'Làm chứng trước Tòa' : 'Court verification'}</p>
+              <span className="text-xs text-[#475569] mt-0.5 block">{lang === 'vi' ? 'Khóa tự hủy sau 60s' : '60s auto-burn key'}</span>
             </div>
           </div>
 
-          {/* 3. Required Signatures Pipeline (3 Keyholders) */}
+          {/* 3. Signature pipeline: ring first, rows below */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-[#475569] flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-[17px] text-[#1E3A8A]">how_to_reg</span>
-                <span>{lang === 'vi' ? 'TIẾN ĐỘ THU THẬP CHỮ KÝ ALL-KEYHOLDERS' : 'ALL-KEYHOLDERS SIGNATURE PIPELINE'}</span>
-              </h2>
-              <span className="text-xs text-[#475569] font-medium bg-[#F1F5F9] px-2.5 py-0.5 rounded-full border border-[#E2E8F0]">
-                {isGuardianConflicted ? '2/2 Consensus (Exception Active)' : '3/3 Consensus Required'}
-              </span>
+            <div className="flex items-center justify-center gap-5 sm:gap-10 p-4 sm:p-5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0]">
+              <SegmentedRing
+                size={132}
+                slots={ringSlots}
+                centerValue={`${signedCount}/${effectiveThreshold}`}
+                centerLabel={lang === 'vi' ? 'chữ ký' : 'signed'}
+                ariaLabel={lang === 'vi' ? `Đã có ${signedCount} trên ${effectiveThreshold} chữ ký` : `${signedCount} of ${effectiveThreshold} signatures`}
+              />
+              <div className="flex flex-col gap-1 min-w-0">
+                {isApproved ? (
+                  <>
+                    <span className="text-2xl font-bold text-[#0F766E] leading-none">{lang === 'vi' ? 'Đủ Quorum' : 'Quorum met'}</span>
+                    <span className="text-xs text-[#475569]">{lang === 'vi' ? 'Có thể giải mã' : 'Ready to decrypt'}</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-4xl font-bold text-[#B45309] leading-none tabular-nums">{remainingCount}</span>
+                    <span className="text-xs text-[#475569]">{lang === 'vi' ? 'chữ ký còn thiếu' : 'signatures missing'}</span>
+                  </>
+                )}
+                {isGuardianConflicted && (
+                  <span className="mt-1 text-[11px] font-semibold text-[#991B1B]">{lang === 'vi' ? 'Ngưỡng 2/2 (ngoại lệ)' : '2-of-2 (exception)'}</span>
+                )}
+              </div>
             </div>
 
             {/* Keyholder 1: Jane Doe (Survivor / Primary Data Owner) */}
@@ -289,19 +255,6 @@ export const QuorumApprovalsView: React.FC<QuorumApprovalsViewProps> = ({
                       <LegalBadge variant="amber" pulse size="sm">
                         {lang === 'vi' ? 'Cần ký duyệt' : 'Action Required'}
                       </LegalBadge>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 mt-1 text-[#475569] text-xs flex-wrap font-medium">
-                    {hasSurvivorSigned ? (
-                      <>
-                        <span>2026-10-22 10:15:32 UTC</span>
-                        <span>•</span>
-                        <span className="text-[#0F766E] font-semibold">{lang === 'vi' ? 'Mảnh khóa 1 đã hợp thức hóa' : 'Key Share 1 Committed'}</span>
-                      </>
-                    ) : (
-                      <span className="text-amber-700 font-medium">
-                        {lang === 'vi' ? 'Chờ Nạn nhân ký ủy quyền mảnh khóa chủ quyền thứ nhất' : 'Awaiting Survivor consent signature'}
-                      </span>
                     )}
                   </div>
                 </div>
@@ -373,11 +326,6 @@ export const QuorumApprovalsView: React.FC<QuorumApprovalsViewProps> = ({
                     )}
                   </div>
 
-                  <p className="text-xs text-[#475569] mt-1 font-normal leading-relaxed">
-                    {hasCounselSigned
-                      ? (lang === 'vi' ? 'Luật sư đã ký xác nhận mục đích tố tụng hợp pháp.' : 'Counsel signature verified in Enclave.')
-                      : (lang === 'vi' ? 'Đang chờ Luật sư trưởng ký phê duyệt giải mã hồ sơ giám định y khoa.' : 'Awaiting Lead Counsel authorization.')}
-                  </p>
                 </div>
               </div>
 
@@ -456,13 +404,6 @@ export const QuorumApprovalsView: React.FC<QuorumApprovalsViewProps> = ({
                     )}
                   </div>
 
-                  <p className="text-xs text-[#475569] mt-1 font-normal leading-relaxed">
-                    {isGuardianConflicted
-                      ? (lang === 'vi' ? 'Tài khoản người giám hộ bị cách ly theo quy trình bảo vệ độc lập do nghi vấn bạo hành.' : 'Guardian excluded due to safeguarding conflict of interest.')
-                      : hasGuardianSigned
-                      ? (lang === 'vi' ? 'Người giám hộ đã ký phê duyệt mảnh khóa bảo hộ thứ ba.' : 'Guardian protective signature verified.')
-                      : (lang === 'vi' ? 'Đang chờ Người giám hộ đại diện hợp pháp ký duyệt mảnh khóa thứ 3.' : 'Awaiting Legal Guardian approval.')}
-                  </p>
                 </div>
               </div>
 
@@ -514,17 +455,9 @@ export const QuorumApprovalsView: React.FC<QuorumApprovalsViewProps> = ({
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-bold text-sm sm:text-base text-[#0F172A]">
-                      {lang === 'vi' ? 'Đã Đạt Đồng Thuận Tất Cả Các Bên Giữ Khóa (All-Keyholders Signed)!' : 'All-Keyholders Consensus Reached!'}
+                      {lang === 'vi' ? 'Đã đủ chữ ký của các bên giữ khóa' : 'All keyholders signed'}
                     </p>
-                    <LegalBadge variant="teal" size="sm">
-                      {lang === 'vi' ? 'Đã Mở Niêm Phong' : 'Enclave Unsealed'}
-                    </LegalBadge>
                   </div>
-                  <p className="text-xs text-slate-600 mt-0.5">
-                    {lang === 'vi' 
-                      ? `Tài liệu '${targetDoc.title}' đã sẵn sàng. Khóa phiên tổng hợp trong RAM máy khách không qua server.` 
-                      : `Evidence '${targetDoc.title}' is ready. Ephemeral session key synthesized in client RAM.`}
-                  </p>
                 </div>
               </div>
               <button
@@ -537,45 +470,6 @@ export const QuorumApprovalsView: React.FC<QuorumApprovalsViewProps> = ({
               </button>
             </div>
           )}
-
-          {/* 4. Three Protection Highlights */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
-            <LegalCard variant="muted" className="flex items-center gap-3 p-3.5 shadow-2xs">
-              <span className="material-symbols-outlined text-[20px] text-[#1E3A8A]">group_work</span>
-              <div>
-                <span className="text-[11px] font-bold text-[#0F172A] block">
-                  {lang === 'vi' ? 'ALL-KEYHOLDERS QUORUM' : 'ALL-KEYHOLDERS QUORUM'}
-                </span>
-                <span className="text-xs text-[#475569] block mt-0.5">
-                  {lang === 'vi' ? 'Bắt buộc đồng thuận từ tất cả các bên' : 'Unanimous consent across Keyholders'}
-                </span>
-              </div>
-            </LegalCard>
-
-            <LegalCard variant="muted" className="flex items-center gap-3 p-3.5 shadow-2xs">
-              <span className="material-symbols-outlined text-[20px] text-[#B45309]">crisis_alert</span>
-              <div>
-                <span className="text-[11px] font-bold text-[#0F172A] block">
-                  {lang === 'vi' ? 'CƠ CHẾ NGOẠI LỆ AN TOÀN' : 'SAFEGUARD EXCEPTIONS'}
-                </span>
-                <span className="text-xs text-[#475569] block mt-0.5">
-                  {lang === 'vi' ? 'Loại trừ bên xung đột & Fail-Closed' : 'Excludes conflicts & Fail-Closed'}
-                </span>
-              </div>
-            </LegalCard>
-
-            <LegalCard variant="muted" className="flex items-center gap-3 p-3.5 shadow-2xs">
-              <span className="material-symbols-outlined text-[20px] text-[#0F766E]">security</span>
-              <div>
-                <span className="text-[11px] font-bold text-[#0F172A] block">
-                  {lang === 'vi' ? 'WEBCRYPTO CLIENT ENCLAVE' : 'CLIENT-SIDE WEBCRYPTO'}
-                </span>
-                <span className="text-xs text-[#475569] block mt-0.5">
-                  {lang === 'vi' ? 'Khóa tổng hợp tại RAM máy khách' : 'Ephemeral keys in client RAM'}
-                </span>
-              </div>
-            </LegalCard>
-          </div>
 
         </div>
       </LegalCard>

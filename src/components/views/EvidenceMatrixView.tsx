@@ -4,6 +4,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { LegalBadge, LegalBadgeVariant } from '../common/LegalBadge';
 import { LegalCard } from '../common/LegalCard';
 import { EditDocumentModal } from '../EditDocumentModal';
+import { DonutChart, SegmentedRing, ShareBar, RingSlot } from '../common/Charts';
 
 interface EvidenceMatrixViewProps {
   documents: MatterDocument[];
@@ -217,6 +218,40 @@ export const EvidenceMatrixView: React.FC<EvidenceMatrixViewProps> = ({
         };
   };
 
+  const tierColors: Record<DataClass, string> = { C0: '#64748B', C1: '#1E3A8A', C2: '#B91C1C' };
+  const tierNames: Record<DataClass, string> = { C0: 'Operational', C1: 'Confidential', C2: 'Sensitive' };
+  const totalDocs = documents.length;
+
+  type OpState = 'open' | 'locked' | 'counsel';
+  const tierOps: Record<DataClass, [OpState, OpState, OpState]> = {
+    C0: ['open', 'open', 'open'],
+    C1: ['locked', 'locked', 'counsel'],
+    C2: ['locked', 'locked', 'locked'],
+  };
+  const opIcon: Record<OpState, { icon: string; color: string }> = {
+    open: { icon: 'check_circle', color: '#0F766E' },
+    locked: { icon: 'lock', color: '#94A3B8' },
+    counsel: { icon: 'balance', color: '#1E3A8A' },
+  };
+  const opNames = lang === 'vi' ? ['Sửa', 'Xóa', 'Xuất'] : ['Edit', 'Delete', 'Export'];
+
+  // Quorum ring: the pending C2 request (first request when none is pending)
+  const ringRequest = quorumRequests.find(q => q.status === 'PENDING') || quorumRequests[0];
+  const ringRoles: { role: string; label: string }[] = [
+    { role: 'SURVIVOR_CLIENT', label: lang === 'vi' ? 'Nạn nhân' : 'Survivor' },
+    { role: 'LEAD_COUNSEL', label: lang === 'vi' ? 'Luật sư' : 'Counsel' },
+    { role: 'GUARDIAN', label: lang === 'vi' ? 'Giám hộ' : 'Guardian' },
+  ];
+  const ringSlots: RingSlot[] = ringRoles.map(r => ({
+    key: r.role,
+    label: r.label,
+    state: r.role === 'GUARDIAN' && isGuardianConflicted
+      ? 'excluded'
+      : ringRequest?.approvals.some(a => a.signerRole === r.role) ? 'signed' : 'pending',
+  }));
+  const ringSigned = ringSlots.filter(sl => sl.state === 'signed').length;
+  const ringRequired = isGuardianConflicted ? 2 : (ringRequest?.threshold || 3);
+
   return (
     <div className="w-full max-w-7xl mx-auto flex flex-col gap-5 sm:gap-6 min-w-0">
       
@@ -253,7 +288,7 @@ export const EvidenceMatrixView: React.FC<EvidenceMatrixViewProps> = ({
             <span className="text-[#1E3A8A] font-semibold">{t.navEvidenceMatrix}</span>
           </div>
           <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A] tracking-tight mt-1 truncate">
-            {lang === 'vi' ? 'Kho Chứng Cứ Niêm Phong & Phân Tầng Bảo Mật (C0 — C1 — C2)' : 'Sealed Evidence Vault & Security Tiers (C0 — C1 — C2)'}
+            {lang === 'vi' ? 'Kho chứng cứ niêm phong' : 'Sealed Evidence Vault'}
           </h1>
         </div>
 
@@ -266,7 +301,7 @@ export const EvidenceMatrixView: React.FC<EvidenceMatrixViewProps> = ({
               title="Mở Bảng Điều Khiển Xử Lý Ngoại Lệ (Table 5)"
             >
               <span className="material-symbols-outlined text-[17px]">crisis_alert</span>
-              <span>{lang === 'vi' ? '⚡ Xử lý Ngoại lệ (Table 5)' : '⚡ Exception Engine'}</span>
+              <span>{lang === 'vi' ? 'Xử lý ngoại lệ' : 'Exception Engine'}</span>
               {isGuardianConflicted && (
                 <span className="w-2 h-2 rounded-full bg-rose-600 animate-pulse ml-0.5" />
               )}
@@ -290,209 +325,148 @@ export const EvidenceMatrixView: React.FC<EvidenceMatrixViewProps> = ({
         </div>
       </div>
 
-      {/* 3 Core Security Tiers Summary Strip (C0, C1, C2 - Brainstorm 2.0) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        {(['C0', 'C1', 'C2'] as DataClass[]).map((clsKey) => {
-          const cfg = classConfigs[clsKey];
-          const count = counts[clsKey];
-          const isSelected = selectedTier === clsKey;
-          const isOtherSelected = selectedTier !== null && !isSelected;
+      {/* Vault overview: tier distribution, tier rules as icons, quorum progress */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 grid-flow-dense gap-3">
+        {/* Distribution donut */}
+        <LegalCard variant="surface" className="md:col-span-1 xl:col-span-3 p-4 flex items-center justify-center">
+          <DonutChart
+            size={156}
+            ariaLabel={lang === 'vi' ? 'Phân bổ tài liệu theo tầng C0, C1, C2' : 'Documents by tier C0, C1, C2'}
+            centerValue={totalDocs}
+            centerLabel={lang === 'vi' ? 'tài liệu' : 'documents'}
+            activeKey={selectedTier}
+            onSelect={(key) => handleTierSelect(key as DataClass)}
+            segments={(['C0', 'C1', 'C2'] as DataClass[]).map(k => ({
+              key: k,
+              label: `${k} ${tierNames[k]}`,
+              value: counts[k],
+              color: tierColors[k],
+            }))}
+          />
+        </LegalCard>
 
-          return (
-            <div
-              key={clsKey}
-              onClick={() => handleTierSelect(clsKey)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  handleTierSelect(clsKey);
-                }
-              }}
-              title={
-                isSelected
-                  ? (lang === 'vi' ? `Đang lọc ${clsKey}. Nhấn để xem tất cả tài liệu` : `Filtering ${clsKey}. Click to show all documents`)
-                  : (lang === 'vi' ? `Nhấn để chỉ hiển thị tài liệu tầng ${clsKey}` : `Click to filter by tier ${clsKey}`)
-              }
-              className={`p-4 rounded-xl flex flex-col justify-between gap-3 border transition-all duration-200 cursor-pointer select-none text-left relative ${
-                isSelected
-                  ? clsKey === 'C2'
-                    ? 'border-rose-500 bg-rose-50/70 ring-2 ring-rose-500 ring-offset-1 shadow-md scale-[1.01]'
-                    : clsKey === 'C1'
-                    ? 'border-blue-600 bg-blue-50/70 ring-2 ring-blue-600 ring-offset-1 shadow-md scale-[1.01]'
-                    : 'border-slate-700 bg-slate-100 ring-2 ring-slate-700 ring-offset-1 shadow-md scale-[1.01]'
-                  : isOtherSelected
-                  ? 'opacity-60 hover:opacity-100 border-[#E2E8F0] bg-white hover:bg-[#F8FAFC] hover:shadow-xs'
-                  : clsKey === 'C2'
-                  ? 'border-[#FECACA] bg-[#FEF2F2]/30 hover:border-rose-300 hover:shadow-xs hover:bg-[#FEF2F2]/60'
-                  : clsKey === 'C1'
-                  ? 'border-[#BFDBFE] bg-[#EFF6FF]/30 hover:border-blue-300 hover:shadow-xs hover:bg-[#EFF6FF]/60'
-                  : 'border-[#E2E8F0] bg-[#F8FAFC] hover:border-slate-300 hover:shadow-xs hover:bg-slate-50'
-              }`}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-2.5">
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${
-                    clsKey === 'C2' ? 'bg-[#FEE2E2] text-[#991B1B] border-[#FECACA]' :
-                    clsKey === 'C1' ? 'bg-[#DBEAFE] text-[#1E3A8A] border-[#BFDBFE]' :
-                    'bg-[#E2E8F0] text-[#334155] border-[#CBD5E1]'
-                  }`}>
-                    <span className="material-symbols-outlined text-[18px]">{cfg.icon}</span>
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="font-bold text-sm text-[#0F172A] block leading-tight">{cfg.label}</span>
-                      {isSelected && (
-                        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-[#0F172A] text-white">
-                          {lang === 'vi' ? 'Đang lọc' : 'Active'}
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-[11px] text-[#64748B] block mt-0.5">{cfg.subLabel}</span>
-                  </div>
-                </div>
-                <span className={`px-2 py-0.5 rounded-full text-xs font-bold border shadow-2xs shrink-0 transition-colors ${
-                  isSelected
-                    ? 'bg-[#0F172A] text-white border-[#0F172A]'
-                    : 'bg-white text-[#0F172A] border-[#CBD5E1]'
-                }`}>
-                  {count} {lang === 'vi' ? 'tài liệu' : 'docs'}
-                </span>
-              </div>
-
-              <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px]">
-                <span className="text-[#475569] font-medium leading-snug">{cfg.badge}</span>
-                <span className={`flex items-center gap-1 text-[11px] font-semibold transition-colors ${
-                  isSelected
-                    ? clsKey === 'C2' ? 'text-rose-700' : clsKey === 'C1' ? 'text-blue-700' : 'text-slate-800'
-                    : 'text-slate-400 group-hover:text-slate-700'
-                }`}>
-                  <span className="material-symbols-outlined text-[14px]">
-                    {isSelected ? 'check_circle' : 'filter_alt'}
-                  </span>
-                  <span>
-                    {isSelected
-                      ? (lang === 'vi' ? 'Bỏ chọn' : 'Clear filter')
-                      : (lang === 'vi' ? 'Bấm để lọc' : 'Click to filter')}
+        {/* Tier list: count share + what each tier allows */}
+        <LegalCard variant="surface" className="md:col-span-2 xl:col-span-5 p-4 flex flex-col justify-center gap-1">
+          <div className="grid grid-cols-[6.5rem_minmax(0,1fr)_1.75rem_repeat(3,2.5rem)] items-end gap-x-3 px-2 pb-1 text-[10px] font-semibold text-[#64748B]">
+            <span />
+            <span />
+            <span />
+            {opNames.map(n => (
+              <span key={n} className="text-center">{n}</span>
+            ))}
+          </div>
+          {(['C0', 'C1', 'C2'] as DataClass[]).map(k => {
+            const isSelected = selectedTier === k;
+            const isDimmed = selectedTier !== null && !isSelected;
+            const isCounsel = currentUser.role === 'LEAD_COUNSEL';
+            return (
+              <button
+                key={k}
+                type="button"
+                onClick={() => handleTierSelect(k)}
+                title={classConfigs[k].ruleText}
+                aria-pressed={isSelected}
+                className={`w-full grid grid-cols-[6.5rem_minmax(0,1fr)_1.75rem_repeat(3,2.5rem)] items-center gap-x-3 px-2 py-2.5 rounded-lg text-left transition cursor-pointer ${
+                  isSelected ? 'bg-[#F1F5F9] ring-1 ring-[#CBD5E1]' : 'hover:bg-[#F8FAFC]'
+                } ${isDimmed ? 'opacity-50 hover:opacity-100' : ''}`}
+              >
+                <span className="flex items-center gap-2 min-w-0">
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: tierColors[k] }} />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-bold text-[#0F172A] leading-none">{k}</span>
+                    <span className="block text-[11px] text-[#64748B] mt-1 truncate">{tierNames[k]}</span>
                   </span>
                 </span>
+                <ShareBar value={counts[k]} total={totalDocs} color={tierColors[k]} />
+                <span className="text-sm font-bold text-[#0F172A] tabular-nums text-right">{counts[k]}</span>
+                {tierOps[k].map((op, i) => {
+                  const resolved: OpState = op === 'counsel' && !isCounsel ? 'locked' : op;
+                  return (
+                    <span key={i} className="flex justify-center">
+                      <span
+                        className="material-symbols-outlined text-[18px]"
+                        style={{ color: opIcon[resolved].color }}
+                      >
+                        {opIcon[resolved].icon}
+                      </span>
+                    </span>
+                  );
+                })}
+              </button>
+            );
+          })}
+          <div className="flex items-center gap-4 px-2 pt-2 text-[10px] text-[#64748B]">
+            <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px]" style={{ color: opIcon.open.color }}>check_circle</span>{lang === 'vi' ? 'Cho phép' : 'Allowed'}</span>
+            <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px]" style={{ color: opIcon.counsel.color }}>balance</span>{lang === 'vi' ? 'Chỉ Luật sư' : 'Counsel only'}</span>
+            <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px]" style={{ color: opIcon.locked.color }}>lock</span>{lang === 'vi' ? 'Cấm' : 'Blocked'}</span>
+          </div>
+        </LegalCard>
+
+        {/* Quorum progress ring */}
+        <LegalCard variant="surface" className="md:col-span-1 xl:col-span-4 p-4 flex items-center justify-center gap-4">
+          {ringRequest ? (
+            <>
+              <SegmentedRing
+                size={128}
+                slots={ringSlots}
+                centerValue={`${ringSigned}/${ringRequired}`}
+                centerLabel={lang === 'vi' ? 'chữ ký' : 'signed'}
+                ariaLabel={lang === 'vi' ? `Quorum ${ringSigned} trên ${ringRequired} chữ ký` : `Quorum ${ringSigned} of ${ringRequired} signatures`}
+              />
+              <div className="flex-1 min-w-0 flex flex-col gap-2.5">
+                <ul className="flex flex-col gap-1.5">
+                  {ringRoles.map((r, i) => {
+                    const st = ringSlots[i].state;
+                    return (
+                      <li key={r.role} className="flex items-center gap-2 text-xs text-[#0F172A]">
+                        <span
+                          className="w-2.5 h-2.5 rounded-full shrink-0"
+                          style={{
+                            backgroundColor: st === 'signed' ? '#0F766E' : st === 'excluded' ? '#B91C1C' : '#CBD5E1',
+                          }}
+                        />
+                        <span className={st === 'excluded' ? 'line-through text-[#64748B]' : ''}>{r.label}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+                <button
+                  type="button"
+                  onClick={() => onOpenQuorumView()}
+                  className="self-start px-3 py-1.5 rounded-lg bg-[#1E3A8A] hover:bg-[#172554] text-white text-xs font-semibold transition cursor-pointer"
+                >
+                  {lang === 'vi' ? 'Mở Quorum' : 'Open Quorum'}
+                </button>
               </div>
-            </div>
-          );
-        })}
+            </>
+          ) : (
+            <span className="text-xs text-[#64748B]">{lang === 'vi' ? 'Chưa có yêu cầu Quorum' : 'No quorum requests'}</span>
+          )}
+        </LegalCard>
       </div>
 
       {/* Unified Evidence Repository Table */}
       <LegalCard variant="surface" className="overflow-hidden shadow-xs min-w-0">
-        {/* Filter Toolbar */}
-        <div className="p-3 sm:p-4 bg-white border-b border-[#E2E8F0] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-            <span className="text-xs font-bold text-[#475569] uppercase tracking-wider flex items-center gap-1 mr-1">
-              <span className="material-symbols-outlined text-[16px] text-[#1E3A8A]">filter_alt</span>
-              <span>{lang === 'vi' ? 'Bộ lọc:' : 'Filter:'}</span>
+        {/* Filter status: the overview above is the filter control */}
+        <div className="px-4 py-3 bg-white border-b border-[#E2E8F0] flex items-center justify-between gap-3 text-xs">
+          <span className="font-semibold text-[#0F172A]">
+            {lang === 'vi' ? 'Danh sách tài liệu' : 'Documents'}
+          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-[#475569] tabular-nums">
+              {selectedTier
+                ? `${filteredDocuments.length} / ${documents.length} (${selectedTier})`
+                : documents.length}
             </span>
-
-            {/* Tất cả / All button */}
-            <button
-              type="button"
-              onClick={() => setSelectedTier(null)}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 border ${
-                selectedTier === null
-                  ? 'bg-[#0F172A] text-white border-[#0F172A] shadow-2xs'
-                  : 'bg-[#F8FAFC] text-[#475569] border-[#E2E8F0] hover:bg-[#F1F5F9]'
-              }`}
-            >
-              <span>{lang === 'vi' ? 'Tất cả' : 'All'}</span>
-              <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${
-                selectedTier === null ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
-              }`}>
-                {documents.length}
-              </span>
-            </button>
-
-            {/* C0 filter button */}
-            <button
-              type="button"
-              onClick={() => handleTierSelect('C0')}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 border ${
-                selectedTier === 'C0'
-                  ? 'bg-slate-800 text-white border-slate-900 shadow-2xs'
-                  : 'bg-[#F8FAFC] text-[#334155] border-[#E2E8F0] hover:bg-[#F1F5F9]'
-              }`}
-            >
-              <span className="w-2 h-2 rounded-full bg-slate-500" />
-              <span>C0 Operational</span>
-              <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${
-                selectedTier === 'C0' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
-              }`}>
-                {counts.C0}
-              </span>
-            </button>
-
-            {/* C1 filter button */}
-            <button
-              type="button"
-              onClick={() => handleTierSelect('C1')}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 border ${
-                selectedTier === 'C1'
-                  ? 'bg-[#1E3A8A] text-white border-[#172554] shadow-2xs'
-                  : 'bg-[#EFF6FF] text-[#1E3A8A] border-[#BFDBFE] hover:bg-[#DBEAFE]'
-              }`}
-            >
-              <span className="w-2 h-2 rounded-full bg-[#1E3A8A]" />
-              <span>C1 Confidential</span>
-              <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${
-                selectedTier === 'C1' ? 'bg-white/20 text-white' : 'bg-[#DBEAFE] text-[#1E3A8A]'
-              }`}>
-                {counts.C1}
-              </span>
-            </button>
-
-            {/* C2 filter button */}
-            <button
-              type="button"
-              onClick={() => handleTierSelect('C2')}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 border ${
-                selectedTier === 'C2'
-                  ? 'bg-[#991B1B] text-white border-[#7F1D1D] shadow-2xs'
-                  : 'bg-[#FEF2F2] text-[#991B1B] border-[#FECACA] hover:bg-[#FEE2E2]'
-              }`}
-            >
-              <span className="w-2 h-2 rounded-full bg-[#DC2626]" />
-              <span>C2 Sensitive</span>
-              <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${
-                selectedTier === 'C2' ? 'bg-white/20 text-white' : 'bg-[#FEE2E2] text-[#991B1B]'
-              }`}>
-                {counts.C2}
-              </span>
-            </button>
-          </div>
-
-          {/* Filter status & clear button */}
-          <div className="flex items-center gap-2 text-xs">
-            {selectedTier ? (
-              <div className="flex items-center gap-2">
-                <span className="text-[#475569]">
-                  {lang === 'vi'
-                    ? `Đang hiển thị ${filteredDocuments.length} / ${documents.length} tài liệu (${selectedTier})`
-                    : `Showing ${filteredDocuments.length} of ${documents.length} (${selectedTier})`}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setSelectedTier(null)}
-                  className="px-2 py-0.5 rounded text-[11px] font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition cursor-pointer flex items-center gap-1"
-                >
-                  <span className="material-symbols-outlined text-[13px]">close</span>
-                  <span>{lang === 'vi' ? 'Xóa lọc' : 'Clear'}</span>
-                </button>
-              </div>
-            ) : (
-              <span className="text-[#64748B] text-xs">
-                {lang === 'vi'
-                  ? `Hiển thị toàn bộ ${documents.length} tài liệu`
-                  : `Showing all ${documents.length} documents`}
-              </span>
+            {selectedTier && (
+              <button
+                type="button"
+                onClick={() => setSelectedTier(null)}
+                className="px-2 py-0.5 rounded text-[11px] font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition cursor-pointer flex items-center gap-1"
+              >
+                <span className="material-symbols-outlined text-[13px]">close</span>
+                <span>{lang === 'vi' ? 'Xóa lọc' : 'Clear'}</span>
+              </button>
             )}
           </div>
         </div>

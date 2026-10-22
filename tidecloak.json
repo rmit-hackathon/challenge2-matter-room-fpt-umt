@@ -1,0 +1,22 @@
+{
+  "realm": "matter-room",
+  "auth-server-url": "http://localhost:8080/",
+  "ssl-required": "external",
+  "resource": "matter-room-client",
+  "public-client": true,
+  "confidential-port": 0,
+  "tide-fabric": {
+    "network": "testnet-sydney",
+    "enclave-type": "AMD-SEV-SNP",
+    "consensus-threshold": "2-of-2",
+    "zero-data-authority": true,
+    "fork-hash": "0x91F4A801B62AE49D",
+    "nodes": [
+      { "id": "ork-node-01-syd", "status": "ATTESTED", "region": "ap-southeast-2" },
+      { "id": "ork-node-02-mel", "status": "ATTESTED", "region": "ap-southeast-4" },
+      { "id": "ork-node-03-sgp", "status": "ATTESTED", "region": "ap-southeast-1" },
+      { "id": "ork-node-04-hcm", "status": "ATTESTED", "region": "ap-southeast-1" },
+      { "id": "ork-node-05-tok", "status": "ATTESTED", "region": "ap-northeast-1" }
+    ]
+  }
+}

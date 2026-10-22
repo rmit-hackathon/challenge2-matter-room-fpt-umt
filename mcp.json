@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "tide-raziel": {
+      "url": "https://mcp.tide.org/mcp",
+      "name": "Raziel — Tide Foundation Emergent Authority MCP",
+      "description": "Model Context Protocol server for analyzing blast radius, validating Zero Data Authority constraints, and verifying Quorum compliance.",
+      "tools": [
+        "tide_security_analysis",
+        "tide_quorum_verifier",
+        "tide_enclave_attestation"
+      ]
+    }
+  }
+}

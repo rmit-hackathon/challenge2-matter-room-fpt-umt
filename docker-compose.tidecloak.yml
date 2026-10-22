@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  tidecloak:
+    image: tideorg/tidecloak-dev:latest
+    container_name: matter-room-tidecloak
+    ports:
+      - "8080:8080"
+    environment:
+      - KC_BOOTSTRAP_ADMIN_USERNAME=admin
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=admin
+      - KC_HEALTH_ENABLED=true
+      - KC_METRICS_ENABLED=true
+      - TIDE_FABRIC_NETWORK=local-sandbox
+      - TIDE_ZERO_DATA_AUTHORITY=true
+    volumes:
+      - ./tidecloak-realm.json:/opt/keycloak/data/import/realm.json:ro
+    command:
+      - start-dev
+      - --import-realm
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080; echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost:8080\\r\\nConnection: close\\r\\n\\r\\n' >&3; grep -q '200 OK' <&3"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s

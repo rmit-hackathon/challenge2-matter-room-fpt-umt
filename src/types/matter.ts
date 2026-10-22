@@ -19,6 +19,7 @@ export interface CrudPolicy {
   canDelete: boolean;
   canExport: boolean;
   exportRestrictedTo?: UserRole;
+  exportRestrictedToRole?: UserRole;
   approvalRequired: boolean;
   ruleExplanation: string;
 }

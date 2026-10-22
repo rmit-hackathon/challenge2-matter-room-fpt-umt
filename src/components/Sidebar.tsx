@@ -157,6 +157,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               const roleIcon =
                 u.role === 'LEAD_COUNSEL' ? 'gavel' :
                 u.role === 'SURVIVOR_CLIENT' ? 'shield_person' :
+                u.role === 'GUARDIAN' ? 'handshake' :
                 isItAdmin ? 'admin_panel_settings' : 'biotech';
 
               return (
@@ -193,11 +194,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <span>{lang === 'vi' ? 'CHUYỂN VAI TRÒ DEMO' : 'DEMO PERSONAS'}</span>
               </span>
               <span className="text-[10px] font-bold text-[#0D9488] bg-[#F0FDFA] px-1.5 py-0.5 rounded border border-[#CCFBF1]">
-                4 Roles
+                {usersList.length} Roles
               </span>
             </div>
 
-            {/* List of 4 Roles with 1-Click Switching */}
+            {/* List of Roles with 1-Click Switching */}
             <div className="flex flex-col gap-1 bg-[#F8FAFC] p-1.5 rounded-xl border border-[#E2E8F0]">
               {usersList.map((u) => {
                 const isActive = u.role === currentUser.role;
@@ -206,12 +207,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 const shortLabel =
                   u.role === 'LEAD_COUNSEL' ? t.roleCounsel :
                   u.role === 'SURVIVOR_CLIENT' ? t.roleSurvivor :
+                  u.role === 'GUARDIAN' ? (lang === 'vi' ? 'Người Giám Hộ' : 'Legal Guardian') :
                   isItAdmin ? t.roleAdmin :
                   u.role === 'FORENSIC_EXPERT' ? t.roleExpert : t.roleDefense;
 
                 const roleIcon =
                   u.role === 'LEAD_COUNSEL' ? 'gavel' :
                   u.role === 'SURVIVOR_CLIENT' ? 'shield_person' :
+                  u.role === 'GUARDIAN' ? 'handshake' :
                   isItAdmin ? 'admin_panel_settings' : 'biotech';
 
                 return (

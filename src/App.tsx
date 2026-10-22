@@ -21,6 +21,7 @@ export const App: React.FC = () => {
   const [currentUserRole, setCurrentUserRole] = useState<UserRole>('LEAD_COUNSEL');
   const [documents, setDocuments] = useState<MatterDocument[]>(MOCK_DOCUMENTS);
   const [quorumRequests, setQuorumRequests] = useState<QuorumRequest[]>(INITIAL_QUORUM_REQUESTS);
+  const [selectedQuorumReqId, setSelectedQuorumReqId] = useState<string>('qr_001');
   const [, setAuditLogs] = useState<AuditLogEntry[]>(INITIAL_AUDIT_LOGS);
 
   // Modal state for viewing decrypted documents or refusal details
@@ -140,9 +141,40 @@ export const App: React.FC = () => {
     }
   };
 
-  // Handler khi nạn nhân upload và mã hóa tài liệu mới
+  // Handler khi người dùng upload và mã hóa tài liệu mới (THÊM)
   const handleUploadSuccess = (newDoc: MatterDocument) => {
     setDocuments(prev => [newDoc, ...prev]);
+
+    // Nếu là tài liệu C2, tự động đăng ký một yêu cầu Quorum tương ứng
+    if (newDoc.dataClass === 'C2') {
+      const isKeyholder = currentUser.role === 'SURVIVOR_CLIENT' || currentUser.role === 'LEAD_COUNSEL' || currentUser.role === 'GUARDIAN';
+      const initialApprovals = isKeyholder ? [
+        {
+          signerId: currentUser.id,
+          signerName: currentUser.name,
+          signerRole: currentUser.role,
+          timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
+          signatureHash: '0x' + Math.random().toString(16).substring(2, 10)
+        }
+      ] : [];
+
+      const newQuorumReq: QuorumRequest = {
+        id: `qr_${Date.now()}`,
+        targetDocumentId: newDoc.id,
+        targetDocumentTitle: newDoc.title,
+        requestedBy: currentUser.name,
+        requestedFor: 'In-Camera Judicial Inspection & Trial Submission',
+        requestedRole: currentUser.role,
+        reason: `Yêu cầu mở niêm phong chứng cứ C2 '${newDoc.title}' phục vụ tố tụng.`,
+        status: 'PENDING',
+        approvals: initialApprovals,
+        threshold: isGuardianConflicted ? 2 : 3,
+        requiredRoles: ['SURVIVOR_CLIENT', 'LEAD_COUNSEL', 'GUARDIAN'],
+        isGuardianConflicted
+      };
+      setQuorumRequests(prev => [newQuorumReq, ...prev]);
+      setSelectedQuorumReqId(newQuorumReq.id);
+    }
 
     const newLog: AuditLogEntry = {
       id: `log_${Date.now()}`,
@@ -151,7 +183,42 @@ export const App: React.FC = () => {
       actorName: currentUser.name,
       actorRole: currentUser.role,
       status: 'SUCCESS',
-      details: `Sovereign Plaintiff uploaded & enclave-sealed '${newDoc.title}' (${newDoc.dataClass || 'C2'}). Client-side AES-256-GCM cipher payload stored.`
+      details: `${currentUser.name} tải lên và niêm phong '${newDoc.title}' (${newDoc.dataClass || 'C2'}). WebCrypto AES-256-GCM bảo vệ an toàn.`
+    };
+    setAuditLogs(prev => [newLog, ...prev]);
+  };
+
+  // Handler Xóa tài liệu C0 (XÓA)
+  const handleDeleteDocument = (docId: string) => {
+    const docToDelete = documents.find(d => d.id === docId);
+    if (!docToDelete) return;
+
+    setDocuments(prev => prev.filter(d => d.id !== docId));
+
+    const newLog: AuditLogEntry = {
+      id: `log_${Date.now()}`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
+      action: 'DOCUMENT_DELETED',
+      actorName: currentUser.name,
+      actorRole: currentUser.role,
+      status: 'SUCCESS',
+      details: `${currentUser.name} (${currentUser.role}) đã xóa tài liệu vận hành C0 '${docToDelete.title}'.`
+    };
+    setAuditLogs(prev => [newLog, ...prev]);
+  };
+
+  // Handler Cập nhật / Chỉnh sửa tài liệu C0 (SỬA)
+  const handleUpdateDocument = (updatedDoc: MatterDocument) => {
+    setDocuments(prev => prev.map(d => d.id === updatedDoc.id ? updatedDoc : d));
+
+    const newLog: AuditLogEntry = {
+      id: `log_${Date.now()}`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
+      action: 'DOCUMENT_EDITED',
+      actorName: currentUser.name,
+      actorRole: currentUser.role,
+      status: 'SUCCESS',
+      details: `${currentUser.name} (${currentUser.role}) đã chỉnh sửa nội dung tài liệu vận hành C0 '${updatedDoc.title}'.`
     };
     setAuditLogs(prev => [newLog, ...prev]);
   };
@@ -340,6 +407,10 @@ export const App: React.FC = () => {
               currentUser={currentUser}
               onApproveQuorum={handleApproveQuorum}
               isGuardianConflicted={isGuardianConflicted}
+              documents={documents}
+              onOpenDocument={handleOpenDocument}
+              selectedRequestId={selectedQuorumReqId}
+              onSelectRequestId={setSelectedQuorumReqId}
             />
           )}
 
@@ -350,10 +421,45 @@ export const App: React.FC = () => {
               currentUser={currentUser}
               quorumRequests={quorumRequests}
               onOpenDocument={handleOpenDocument}
-              onOpenQuorumView={() => setCurrentTab('quorum-approvals')}
+              onOpenQuorumView={(targetDoc) => {
+                if (targetDoc) {
+                  let req = quorumRequests.find(q => q.targetDocumentId === targetDoc.id);
+                  if (!req) {
+                    const newReq: QuorumRequest = {
+                      id: `qr_${Date.now()}`,
+                      targetDocumentId: targetDoc.id,
+                      targetDocumentTitle: targetDoc.title,
+                      requestedBy: currentUser.name,
+                      requestedFor: 'In-Camera Judicial Inspection & Trial Submission',
+                      requestedRole: currentUser.role,
+                      reason: `Yêu cầu mở niêm phong chứng cứ C2 '${targetDoc.title}' phục vụ tố tụng.`,
+                      status: 'PENDING',
+                      approvals: [
+                        {
+                          signerId: 'usr_client_01',
+                          signerName: 'Jane Doe (Survivor)',
+                          signerRole: 'SURVIVOR_CLIENT',
+                          timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
+                          signatureHash: '0x71a2ce89'
+                        }
+                      ],
+                      threshold: isGuardianConflicted ? 2 : 3,
+                      requiredRoles: ['SURVIVOR_CLIENT', 'LEAD_COUNSEL', 'GUARDIAN'],
+                      isGuardianConflicted
+                    };
+                    setQuorumRequests(prev => [newReq, ...prev]);
+                    setSelectedQuorumReqId(newReq.id);
+                  } else {
+                    setSelectedQuorumReqId(req.id);
+                  }
+                }
+                setCurrentTab('quorum-approvals');
+              }}
               onOpenUploadModal={() => setIsUploadModalOpen(true)}
               onOpenExceptionModal={() => setIsExceptionModalOpen(true)}
               isGuardianConflicted={isGuardianConflicted}
+              onDeleteDocument={handleDeleteDocument}
+              onUpdateDocument={handleUpdateDocument}
             />
           )}
 

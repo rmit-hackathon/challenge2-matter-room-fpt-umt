@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { QuorumRequest, UserProfile } from '../../types/matter';
+import { QuorumRequest, UserProfile, MatterDocument } from '../../types/matter';
 import { useLanguage } from '../../context/LanguageContext';
 import { LegalBadge } from '../common/LegalBadge';
 import { LegalCard } from '../common/LegalCard';
@@ -9,6 +9,10 @@ interface QuorumApprovalsViewProps {
   currentUser: UserProfile;
   onApproveQuorum: (requestId: string) => void;
   isGuardianConflicted?: boolean;
+  documents?: MatterDocument[];
+  onOpenDocument?: (doc: MatterDocument) => void;
+  selectedRequestId?: string;
+  onSelectRequestId?: (id: string) => void;
 }
 
 export const QuorumApprovalsView: React.FC<QuorumApprovalsViewProps> = ({
@@ -16,11 +20,17 @@ export const QuorumApprovalsView: React.FC<QuorumApprovalsViewProps> = ({
   currentUser,
   onApproveQuorum,
   isGuardianConflicted = false,
+  documents = [],
+  onOpenDocument,
+  selectedRequestId,
+  onSelectRequestId,
 }) => {
   const { t, lang } = useLanguage();
   const [isBroadcasting, setIsBroadcasting] = useState(false);
+  const [internalSelectedId, setInternalSelectedId] = useState<string>(selectedRequestId || quorumRequests[0]?.id || 'qr_001');
 
-  const activeReq = quorumRequests[0] || {
+  const currentReqId = selectedRequestId || internalSelectedId;
+  const activeReq = quorumRequests.find(q => q.id === currentReqId) || quorumRequests[0] || {
     id: 'req_01',
     targetDocumentId: 'doc_03',
     targetDocumentTitle: 'Exhibit B: Confidential Forensic Medical Trauma Evaluation & Physical Examination',
@@ -45,8 +55,16 @@ export const QuorumApprovalsView: React.FC<QuorumApprovalsViewProps> = ({
   const effectiveThreshold = isGuardianConflicted ? 2 : (activeReq.threshold || 3);
   const isApproved = activeReq.status === 'APPROVED' || activeReq.approvals.length >= effectiveThreshold;
 
+  const hasSurvivorSigned = activeReq.approvals.some(a => a.signerRole === 'SURVIVOR_CLIENT');
   const hasCounselSigned = activeReq.approvals.some(a => a.signerRole === 'LEAD_COUNSEL');
   const hasGuardianSigned = activeReq.approvals.some(a => a.signerRole === 'GUARDIAN');
+
+  const targetDoc = documents.find(d => d.id === activeReq.targetDocumentId);
+
+  const handleSelectReq = (id: string) => {
+    setInternalSelectedId(id);
+    onSelectRequestId?.(id);
+  };
 
   const handleSign = () => {
     setIsBroadcasting(true);
@@ -59,7 +77,7 @@ export const QuorumApprovalsView: React.FC<QuorumApprovalsViewProps> = ({
   return (
     <div className="w-full max-w-5xl mx-auto flex flex-col gap-5 sm:gap-6 font-sans min-w-0">
       
-      {/* Top Action Breadcrumb */}
+      {/* Top Action Breadcrumb & Request Selector */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2 text-[#475569] text-xs sm:text-sm">
           <span className="material-symbols-outlined text-[18px] text-[#1E3A8A]">gavel</span>
@@ -67,13 +85,41 @@ export const QuorumApprovalsView: React.FC<QuorumApprovalsViewProps> = ({
           <span className="text-[#CBD5E1]">/</span>
           <span className="text-[#1E3A8A] font-semibold">{t.navQuorumApprovals}</span>
           <span className="text-[#CBD5E1]">/</span>
-          <span className="text-[#0F172A] font-medium">Exhibit B (C2 Sensitive)</span>
+          <span className="text-[#0F172A] font-medium truncate max-w-xs">{activeReq.targetDocumentTitle}</span>
         </div>
 
-        <LegalBadge variant="amber" dot pulse size="sm">
-          {t.lockExpires}
+        <LegalBadge variant={isApproved ? 'teal' : 'amber'} dot pulse={!isApproved} size="sm">
+          {isApproved ? (lang === 'vi' ? 'Đã đạt đồng thuận' : 'Consensus Approved') : t.lockExpires}
         </LegalBadge>
       </div>
+
+      {/* Multiple Requests Switcher */}
+      {quorumRequests.length > 1 && (
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 p-2 bg-slate-100/70 rounded-xl border border-slate-200">
+          <span className="text-[11px] font-bold text-slate-500 uppercase shrink-0 px-2">
+            {lang === 'vi' ? 'Chọn hồ sơ Quorum:' : 'Select Escrow:'}
+          </span>
+          {quorumRequests.map((req) => (
+            <button
+              key={req.id}
+              onClick={() => handleSelectReq(req.id)}
+              type="button"
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0 transition cursor-pointer flex items-center gap-1.5 ${
+                activeReq.id === req.id
+                  ? 'bg-[#1E3A8A] text-white shadow-xs'
+                  : 'bg-white hover:bg-slate-200/70 text-slate-700 border border-slate-200'
+              }`}
+            >
+              <span className="truncate max-w-[160px] sm:max-w-[220px]">{req.targetDocumentTitle}</span>
+              <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${
+                req.status === 'APPROVED' ? 'bg-teal-500 text-white' : 'bg-amber-100 text-amber-800'
+              }`}>
+                {req.approvals.length}/{isGuardianConflicted ? 2 : req.threshold}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Main Container */}
       <LegalCard variant="surface" className="overflow-hidden shadow-xs">
@@ -214,30 +260,81 @@ export const QuorumApprovalsView: React.FC<QuorumApprovalsViewProps> = ({
             </div>
 
             {/* Keyholder 1: Jane Doe (Survivor / Primary Data Owner) */}
-            <div className="bg-[#F0FDFA] rounded-xl p-4 shadow-2xs border border-[#CCFBF1] flex flex-col md:flex-row md:items-center justify-between gap-3">
-              <div className="flex items-start gap-3.5">
-                <div className="w-10 h-10 rounded-full bg-[#0F766E] text-white flex items-center justify-center shrink-0 shadow-2xs">
-                  <span className="material-symbols-outlined text-[20px]">check</span>
+            <div
+              className={`rounded-xl p-4 shadow-2xs border flex flex-col lg:flex-row lg:items-center justify-between gap-4 transition-all ${
+                hasSurvivorSigned
+                  ? 'bg-[#F0FDFA] border-[#CCFBF1]'
+                  : 'bg-[#FFFBEB] border-[#FEF3C7]'
+              }`}
+            >
+              <div className="flex items-start gap-3.5 max-w-xl">
+                <div
+                  className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 shadow-2xs ${
+                    hasSurvivorSigned ? 'bg-[#0F766E] text-white' : 'bg-[#B45309] text-white'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[20px]">
+                    {hasSurvivorSigned ? 'check' : 'shield_person'}
+                  </span>
                 </div>
                 <div className="flex flex-col">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-bold text-sm sm:text-base text-[#0F172A]">Jane Doe</span>
                     <span className="text-xs text-[#475569]">— {lang === 'vi' ? 'Nạn nhân (Chủ thể dữ liệu tối thượng)' : 'Survivor (Primary Sovereign)'}</span>
-                    <LegalBadge variant="teal" size="sm">
-                      {lang === 'vi' ? 'Đã ký & Ủy quyền' : 'Signed & Consented'}
-                    </LegalBadge>
+                    {hasSurvivorSigned ? (
+                      <LegalBadge variant="teal" size="sm">
+                        {lang === 'vi' ? 'Đã ký & Ủy quyền' : 'Signed & Consented'}
+                      </LegalBadge>
+                    ) : (
+                      <LegalBadge variant="amber" pulse size="sm">
+                        {lang === 'vi' ? 'Cần ký duyệt' : 'Action Required'}
+                      </LegalBadge>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 mt-1 text-[#475569] text-xs flex-wrap font-medium">
-                    <span>2026-10-22 10:15:32 UTC</span>
-                    <span>•</span>
-                    <span className="text-[#0F766E] font-semibold">{lang === 'vi' ? 'Mảnh khóa 1 đã hợp thức hóa' : 'Key Share 1 Committed'}</span>
+                    {hasSurvivorSigned ? (
+                      <>
+                        <span>2026-10-22 10:15:32 UTC</span>
+                        <span>•</span>
+                        <span className="text-[#0F766E] font-semibold">{lang === 'vi' ? 'Mảnh khóa 1 đã hợp thức hóa' : 'Key Share 1 Committed'}</span>
+                      </>
+                    ) : (
+                      <span className="text-amber-700 font-medium">
+                        {lang === 'vi' ? 'Chờ Nạn nhân ký ủy quyền mảnh khóa chủ quyền thứ nhất' : 'Awaiting Survivor consent signature'}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5 bg-white border border-[#CCFBF1] px-3 py-1 rounded-lg self-start md:self-auto text-[#0F766E] font-mono text-xs font-semibold">
-                <span className="material-symbols-outlined text-[15px] text-[#0F766E]">fingerprint</span>
-                <span>SIG: 0x71...ce89</span>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {!hasSurvivorSigned ? (
+                  currentUser.role === 'SURVIVOR_CLIENT' ? (
+                    <button
+                      onClick={handleSign}
+                      disabled={isBroadcasting}
+                      type="button"
+                      className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#0F766E] text-white hover:bg-[#0D9488] transition shadow-xs active:scale-[0.98] font-semibold text-xs cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">lock_open</span>
+                      <span>
+                        {isBroadcasting
+                          ? (lang === 'vi' ? 'Đang phát ký số...' : 'Signing...')
+                          : (lang === 'vi' ? 'Ký duyệt Quorum (Nạn nhân)' : 'Sign as Survivor')}
+                      </span>
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white text-[#B45309] border border-[#FEF3C7] text-xs font-medium">
+                      <span className="material-symbols-outlined text-[15px] text-[#B45309]">info</span>
+                      <span>{lang === 'vi' ? 'Đổi sang Persona Nạn nhân để ký' : 'Switch to Survivor persona to sign'}</span>
+                    </div>
+                  )
+                ) : (
+                  <div className="flex items-center gap-1.5 bg-white border border-[#CCFBF1] px-3 py-1 rounded-lg self-start md:self-auto text-[#0F766E] font-mono text-xs font-semibold">
+                    <span className="material-symbols-outlined text-[15px] text-[#0F766E]">fingerprint</span>
+                    <span>SIG: 0x71...ce89</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -406,6 +503,40 @@ export const QuorumApprovalsView: React.FC<QuorumApprovalsViewProps> = ({
               </div>
             </div>
           </div>
+
+          {/* Unlocked Decrypt Action Banner when Approved */}
+          {isApproved && onOpenDocument && targetDoc && (
+            <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50 to-blue-50 border border-teal-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="flex items-center gap-3.5">
+                <div className="w-11 h-11 rounded-xl bg-[#0F766E] text-white flex items-center justify-center shadow-xs shrink-0">
+                  <span className="material-symbols-outlined text-[24px]">lock_open</span>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-bold text-sm sm:text-base text-[#0F172A]">
+                      {lang === 'vi' ? 'Đã Đạt Đồng Thuận Tất Cả Các Bên Giữ Khóa (All-Keyholders Signed)!' : 'All-Keyholders Consensus Reached!'}
+                    </p>
+                    <LegalBadge variant="teal" size="sm">
+                      {lang === 'vi' ? 'Đã Mở Niêm Phong' : 'Enclave Unsealed'}
+                    </LegalBadge>
+                  </div>
+                  <p className="text-xs text-slate-600 mt-0.5">
+                    {lang === 'vi' 
+                      ? `Tài liệu '${targetDoc.title}' đã sẵn sàng. Khóa phiên tổng hợp trong RAM máy khách không qua server.` 
+                      : `Evidence '${targetDoc.title}' is ready. Ephemeral session key synthesized in client RAM.`}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => onOpenDocument(targetDoc)}
+                type="button"
+                className="px-5 py-2.5 rounded-xl bg-[#0F766E] hover:bg-[#0D9488] text-white text-xs font-bold transition shadow-xs flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] shrink-0"
+              >
+                <span className="material-symbols-outlined text-[18px]">visibility</span>
+                <span>{lang === 'vi' ? 'Giải mã tài liệu ngay (12ms)' : 'Decrypt Document (12ms)'}</span>
+              </button>
+            </div>
+          )}
 
           {/* 4. Three Protection Highlights */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { SecurityLevel, MatterDocument } from '../types/matter';
+import { SecurityLevel, MatterDocument, DataClass, CrudPolicy } from '../types/matter';
 import { RealCryptoEngine } from '../lib/cryptoEngine';
 import { useLanguage } from '../context/LanguageContext';
 import { buildClientPdf } from '../lib/pdfBuilder';
@@ -15,7 +15,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('Medical Evidence');
-  const [securityLevel, setSecurityLevel] = useState<SecurityLevel>('LEVEL_3_HIGHLY_SENSITIVE');
+  const [dataClass, setDataClass] = useState<DataClass>('C2');
   const [summary, setSummary] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -67,10 +67,14 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
         ? `${(selectedFile.size / 1024).toFixed(1)} KB (PDF)`
         : '2.4 KB (PDF)';
 
+      const securityLevel: SecurityLevel = 
+        dataClass === 'C0' ? 'LEVEL_1_ROUTINE' :
+        dataClass === 'C1' ? 'LEVEL_2_SENSITIVE' : 'LEVEL_3_HIGHLY_SENSITIVE';
+
       if (selectedFile) {
         rawPdfBytes = await selectedFile.arrayBuffer();
       } else {
-        rawPdfBytes = buildClientPdf(title.trim(), summary.trim() || 'Confidential survivor disclosure sealed under Emergent Authority.', {
+        rawPdfBytes = buildClientPdf(title.trim(), summary.trim() || 'Confidential disclosure sealed under Emergent Authority.', {
           securityLevel,
           author: 'Sovereign Litigant'
         });
@@ -82,15 +86,37 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
         isPdf: true,
         fileName: finalFileName,
         mimeType: 'application/pdf',
-        classification: securityLevel
+        classification: dataClass
       });
 
       const randomHash = `0x${payload.cipherHex.substring(0, 4)}...${payload.cipherHex.substring(payload.cipherHex.length - 4)}`;
+
+      const crudPolicy: CrudPolicy = dataClass === 'C0' ? {
+        canEdit: true,
+        canDelete: true,
+        canExport: true,
+        approvalRequired: false,
+        ruleExplanation: 'C0: Dữ liệu vận hành. Mọi người có quyền sửa, xóa, xuất.'
+      } : dataClass === 'C1' ? {
+        canEdit: false,
+        canDelete: false,
+        canExport: true,
+        exportRestrictedToRole: 'LEAD_COUNSEL',
+        approvalRequired: false,
+        ruleExplanation: 'C1: Hồ sơ mật nhóm thụ lý. Cấm sửa, cấm xóa; chỉ duy nhất Luật sư phụ trách có quyền xuất.'
+      } : {
+        canEdit: false,
+        canDelete: false,
+        canExport: false,
+        approvalRequired: true,
+        ruleExplanation: 'C2: Bằng chứng nhạy cảm & niêm phong. Cấm sửa, cấm xóa, cấm xuất; bắt buộc Quorum Tất cả bên giữ khóa.'
+      };
 
       const newDoc: MatterDocument = {
         id: `doc_${Date.now()}`,
         title: title.trim(),
         category,
+        dataClass,
         securityLevel,
         size: sizeStr,
         uploadedAt: new Date().toISOString().substring(0, 16).replace('T', ' '),
@@ -99,7 +125,8 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
         fileName: finalFileName,
         mimeType: 'application/pdf',
         encryptedPayload: payload,
-        summary: summary.trim() || (lang === 'vi' ? 'Hồ sơ PDF nhị phân được nạn nhân tải lên và mã hóa WebCrypto.' : 'Authentic PDF binary encrypted client-side via WebCrypto AES-GCM.')
+        summary: summary.trim() || (lang === 'vi' ? 'Hồ sơ PDF nhị phân được tải lên và mã hóa WebCrypto.' : 'Authentic PDF binary encrypted client-side via WebCrypto AES-GCM.'),
+        crudPolicy
       };
 
       onUploadSuccess(newDoc);
@@ -251,17 +278,16 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
 
             <div>
               <label className="block font-bold text-slate-700 mb-1">
-                {lang === 'vi' ? 'Cấp độ bảo mật:' : 'Protection Level:'}
+                {lang === 'vi' ? 'Phân loại Dữ liệu (Brainstorm 2.0):' : 'Data Classification:'}
               </label>
               <select
-                value={securityLevel}
-                onChange={(e) => setSecurityLevel(e.target.value as SecurityLevel)}
+                value={dataClass}
+                onChange={(e) => setDataClass(e.target.value as DataClass)}
                 className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1E3A8A] text-xs sm:text-sm font-semibold"
               >
-                <option value="LEVEL_1_ROUTINE">{lang === 'vi' ? 'Cấp 1 — Thông thường' : 'Level 1 — Routine'}</option>
-                <option value="LEVEL_2_SENSITIVE">{lang === 'vi' ? 'Cấp 2 — Nhạy cảm (Theo vai trò)' : 'Level 2 — Sensitive'}</option>
-                <option value="LEVEL_3_HIGHLY_SENSITIVE">{lang === 'vi' ? 'Cấp 3 — Cần 2 bên duyệt' : 'Level 3 — Highly Sensitive'}</option>
-                <option value="LEVEL_4_CRITICAL">{lang === 'vi' ? 'Cấp 4 — Tuyệt mật' : 'Level 4 — Critical'}</option>
+                <option value="C0">{lang === 'vi' ? 'C0 — Vận hành công khai (Mở Sửa/Xóa/Xuất)' : 'C0 — Operational (Full Open CRUD)'}</option>
+                <option value="C1">{lang === 'vi' ? 'C1 — Hồ sơ mật nhóm luật sư (Chỉ Luật sư xuất)' : 'C1 — Confidential (Counsel Export Only)'}</option>
+                <option value="C2">{lang === 'vi' ? 'C2 — Chứng cứ niêm phong (Quorum All-Keyholders)' : 'C2 — Sensitive / Sealed (All Keyholders)'}</option>
               </select>
             </div>
           </div>

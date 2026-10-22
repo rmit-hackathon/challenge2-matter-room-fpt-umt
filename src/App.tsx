@@ -50,6 +50,9 @@ export const App: React.FC = () => {
   // Left Sidebar Collapsible State
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
+  // TideCloak Plan C Session Minting Toast State
+  const [tideToast, setTideToast] = useState<{ message: string; subtext?: string; isZeroAuth?: boolean } | null>(null);
+
   // Dynamic user profiles state (supports in-modal editing like Facebook profile edit)
   const [userProfiles, setUserProfiles] = useState<Record<string, UserProfile>>(MOCK_USERS);
   const currentUser = userProfiles[currentUserRole] || userProfiles.LEAD_COUNSEL;
@@ -68,8 +71,18 @@ export const App: React.FC = () => {
       tidecloak.setRole(role, userProfiles[role].id);
     }
 
+    const targetUser = userProfiles[role];
+    const isZeroAuth = role === 'ADMIN' || (role as string) === 'IT_ADMIN';
+    setTideToast({
+      message: `${targetUser ? targetUser.name : role} authenticated`,
+      subtext: isZeroAuth 
+        ? 'Claim: zero_data_authority = true (0% Data Authority)' 
+        : 'Claim: Sovereign Keyholder slot active',
+      isZeroAuth
+    });
+
     // If switching to Admin persona, automatically switch to Admin Console view
-    if (role === 'ADMIN' || role === 'IT_ADMIN') {
+    if (role === 'ADMIN' || (role as string) === 'IT_ADMIN') {
       setCurrentTab('admin-console');
     } else if (currentTab === 'admin-console') {
       setCurrentTab('evidence-matrix');
@@ -533,6 +546,40 @@ export const App: React.FC = () => {
         onSelectRole={handleSelectRole}
         onUpdateUser={handleUpdateUser}
       />
+
+      {/* TideCloak Plan C OIDC Minting Notification Toast */}
+      {tideToast && (
+        <div className="fixed bottom-6 right-6 z-50 max-w-sm w-full bg-white border border-[#E2E8F0] shadow-xl rounded-2xl p-3.5 flex items-start gap-3 animate-in fade-in slide-in-from-bottom-5 duration-200">
+          <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+            tideToast.isZeroAuth ? 'bg-[#FEF2F2] text-[#DC2626] border border-[#FECACA]' : 'bg-[#F0FDFA] text-[#0F766E] border border-[#99F6E4]'
+          }`}>
+            <span className="material-symbols-outlined text-[20px]">
+              {tideToast.isZeroAuth ? 'admin_panel_settings' : 'vpn_key'}
+            </span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="font-bold text-xs text-[#0F172A] truncate">TideCloak Token Minted</span>
+              <span className="text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded bg-[#CCFBF1] text-[#0F766E]">
+                Plan C
+              </span>
+            </div>
+            <p className="text-xs text-[#334155] mt-0.5 truncate">{tideToast.message}</p>
+            {tideToast.subtext && (
+              <p className={`text-[11px] font-mono mt-0.5 truncate ${tideToast.isZeroAuth ? 'text-[#DC2626]' : 'text-[#0D9488]'}`}>
+                {tideToast.subtext}
+              </p>
+            )}
+          </div>
+          <button
+            onClick={() => setTideToast(null)}
+            type="button"
+            className="text-slate-400 hover:text-slate-600 cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[18px]">close</span>
+          </button>
+        </div>
+      )}
 
     </div>
   );

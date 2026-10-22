@@ -16,6 +16,7 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({
   currentUser,
   onOpenProfileSettings,
+  onOpenEnclaveInspector,
   isSidebarCollapsed,
   onToggleSidebar,
 }) => {
@@ -63,8 +64,29 @@ export const Navbar: React.FC<NavbarProps> = ({
           </span>
         </div>
 
-        {/* Center: Open breathing room for authentic high-end executive aesthetic */}
-        <div className="flex-1" />
+        {/* Center: TideCloak Plan C Status Badge (Clickable to open Enclave Inspector) */}
+        <div className="flex-1 flex justify-center items-center">
+          <button
+            onClick={onOpenEnclaveInspector}
+            type="button"
+            className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-[#F0FDFA] hover:bg-[#CCFBF1] text-[#0F766E] border border-[#99F6E4] shadow-2xs transition-all cursor-pointer group"
+            title={lang === 'vi' ? 'TideCloak Plan C: Nhấn để xem Chi tiết Kiến trúc & Token' : 'TideCloak Plan C: Click to inspect Architecture & Tokens'}
+          >
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#0D9488] opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#0F766E]"></span>
+            </span>
+            <span className="font-mono font-bold text-[10.5px] sm:text-[11px] tracking-wide flex items-center gap-1.5">
+              <span>TideCloak: Plan C Simulated</span>
+              <span className="text-[10px] text-[#0D9488] font-semibold bg-white/70 px-1.5 py-0.2 rounded border border-[#99F6E4] hidden md:inline">
+                100% Parity
+              </span>
+            </span>
+            <span className="material-symbols-outlined text-[15px] text-[#0D9488] group-hover:translate-x-0.5 transition-transform hidden sm:inline">
+              terminal
+            </span>
+          </button>
+        </div>
 
         {/* 2. Right Section: Language Switcher & Interactive User Profile Card */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">

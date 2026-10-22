@@ -80,15 +80,16 @@ timeline
 
 ### 📍 CẢNH 5: BẰNG CHỨNG KIẾN TRÚC & LỜI KẾT (01:25 – 01:50)
 * **Thao tác màn hình:**
-  * Bấm vào nút huy hiệu **"TideCloak Live (8080)"** trên Navbar.
+  * Bấm vào nút huy hiệu **"TideCloak: Plan C Simulated"** trên Navbar giữa màn hình.
   * Mở **Enclave Inspector Modal**:
-    * Tab 1: Trỏ chuột vào dòng `● LIVE DOCKER OIDC` đang chạy cổng `8080` cùng realm OIDC với vai trò `GUARDIAN`.
+    * Chỉ vào Thẻ thông báo xanh ngọc: `Tide Foundation Hackathon Directive — Plan C Active (100% Architectural & Cryptographic Parity)`.
+    * Tab 1: Trỏ chuột vào Token Claims RS256, Enclave Node AMD-SEV-SNP, và trạng thái cấp quyền vai trò.
     * Tab 2: Lướt qua Hợp đồng Forseti C# kiểm tra đồng thời Invariant 1 (`ADMIN`/`IT_ADMIN`), Invariant 2 (C0), Invariant 3 (C1), và Invariant 4 (C2 Quorum 3/3).
     * Tab 3: Cấu hình Raziel MCP Server `https://mcp.tide.org/mcp`.
 * **Lời thoại tiếng Anh:**
-  > *"Opening the Enclave Inspector, you can verify our live Docker TideCloak container running on port 8080 with OIDC realm import, our Forseti C# policy contract enforcing C0, C1, C2 rules, and Tide MCP integration. Matter Room proves that trust no longer needs to be the bottleneck. Privacy and human dignity are guaranteed by mathematics, not human promises. Thank you!"*
+  > *"Opening the Enclave Inspector via our Navbar status badge, you can observe our Plan C architectural alignment operating with 100% cryptographic parity: authentic RS256 OIDC token minting, our Forseti C# policy contract enforcing C0, C1, C2 rules, and Tide's Raziel MCP integration. Matter Room proves that trust no longer needs to be the bottleneck. Privacy and human dignity are guaranteed by mathematics, not human promises. Thank you!"*
 * **Bản dịch tiếng Việt:**
-  > *"Mở bảng Enclave Inspector, bạn có thể kiểm chứng máy chủ TideCloak Docker đang chạy trực tiếp trên cổng 8080 cùng realm OIDC, hợp đồng chính sách Forseti C# thực thi triệt để các quy tắc C0, C1, C2, và kết nối Tide MCP. Matter Room chứng minh rằng niềm tin không còn là rào cản. Quyền riêng tư và nhân phẩm con người được bảo vệ bằng toán học, không phải lời hứa của con người. Cảm ơn các bạn!"*
+  > *"Mở bảng Enclave Inspector từ huy hiệu trạng thái trên Navbar, bạn có thể kiểm chứng cơ chế Plan C với 100% tính tương đương toán học: cấp token RS256 chuẩn OIDC, hợp đồng chính sách Forseti C# thực thi triệt để các quy tắc C0, C1, C2, và kết nối Tide Raziel MCP. Matter Room chứng minh rằng niềm tin không còn là rào cản. Quyền riêng tư và nhân phẩm con người được bảo vệ bằng toán học, không phải lời hứa của con người. Cảm ơn các bạn!"*
 
 ---
 

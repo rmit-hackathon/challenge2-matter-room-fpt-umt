@@ -1,24 +1,33 @@
 export type UserRole = 
   | 'LEAD_COUNSEL' 
   | 'SURVIVOR_CLIENT' 
+  | 'GUARDIAN'
   | 'FORENSIC_EXPERT' 
   | 'ADMIN' 
-  | 'IT_ADMIN'
-  | 'OPPOSING_COUNSEL';
+  | 'IT_ADMIN';
 
 export type NavTab = 
   | 'evidence-matrix' 
   | 'quorum-approvals' 
-  | 'privilege-and-redaction' 
-  | 'immutable-audit-trail' 
-  | 'litigation-holds'
   | 'admin-console';
 
+// Brainstorm 2.0 Core Data Classification: C0, C1, C2
+export type DataClass = 'C0' | 'C1' | 'C2';
+
+export interface CrudPolicy {
+  canEdit: boolean;
+  canDelete: boolean;
+  canExport: boolean;
+  exportRestrictedTo?: UserRole;
+  approvalRequired: boolean;
+  ruleExplanation: string;
+}
+
 export type SecurityLevel = 
-  | 'LEVEL_1_ROUTINE'          // Level 1 — Routine confidential information (No per-request approval)
-  | 'LEVEL_2_SENSITIVE'        // Level 2 — Sensitive case information (Restricted role-based access)
-  | 'LEVEL_3_HIGHLY_SENSITIVE' // Level 3 — Highly sensitive personal information (Explicit approval required)
-  | 'LEVEL_4_CRITICAL';        // Level 4 — Critical or exceptionally restricted information (Strongest access controls)
+  | 'LEVEL_1_ROUTINE'          // C0 — Operational: non-sensitive workflow information (No approval needed)
+  | 'LEVEL_2_SENSITIVE'        // C1 — Confidential: ordinary case material restricted to lawyers
+  | 'LEVEL_3_HIGHLY_SENSITIVE' // C2 — Sensitive: personal/case information, requires ALL keyholders
+  | 'LEVEL_4_CRITICAL';        // C2 — Sealed critical identity/safehouse coordinates
 
 export type ClassificationLevel = 
   | 'DISCOVERY' 
@@ -31,6 +40,9 @@ export interface EncryptedPayload {
   saltHex: string;
   tagHex: string;
   classification: string;
+  isPdf?: boolean;
+  fileName?: string;
+  mimeType?: string;
 }
 
 export interface UserProfile {
@@ -40,7 +52,7 @@ export interface UserProfile {
   organization: string;
   role: UserRole;
   avatar: string;
-  hasDataAuthority: boolean; // Admin = FALSE (Zero Data Authority), Nạn nhân & Luật sư = TRUE
+  hasDataAuthority: boolean; // Admin = FALSE (Zero Data Authority), Nạn nhân & Luật sư & Người giám hộ = TRUE
   roleDescription: string;
 }
 
@@ -48,14 +60,19 @@ export interface MatterDocument {
   id: string;
   title: string;
   category: string;
+  dataClass?: DataClass; // C0, C1, C2
   securityLevel?: SecurityLevel;
   classification?: ClassificationLevel;
   size: string;
   uploadedAt: string;
   encryptedHash: string;
-  decryptedContent: string;
+  decryptedContent?: string;
   summary: string;
   encryptedPayload?: EncryptedPayload;
+  isPdf?: boolean;
+  fileName?: string;
+  mimeType?: string;
+  crudPolicy?: CrudPolicy;
   requiredQuorum?: {
     rolesRequired: UserRole[] | string[];
     description: string;
@@ -79,6 +96,9 @@ export interface QuorumRequest {
     signatureHash: string;
   }[];
   threshold: number;
+  requiredRoles?: UserRole[];
+  isGuardianConflicted?: boolean;
+  safeguardNotice?: string;
 }
 
 export interface AuditLogEntry {

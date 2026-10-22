@@ -1,6 +1,13 @@
 import React from 'react';
-import { NavTab, UserProfile } from '../types/matter';
+import { NavTab, UserProfile, UserRole } from '../types/matter';
 import { useLanguage } from '../context/LanguageContext';
+
+interface NavItem {
+  id: NavTab;
+  label: string;
+  icon: string;
+  badge?: number;
+}
 
 interface SidebarProps {
   currentTab: NavTab;
@@ -9,6 +16,8 @@ interface SidebarProps {
   currentUser: UserProfile;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
+  allUsers?: Record<string, UserProfile>;
+  onSelectRole?: (role: UserRole) => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -18,72 +27,72 @@ export const Sidebar: React.FC<SidebarProps> = ({
   currentUser,
   isCollapsed,
   onToggleCollapse,
+  allUsers,
+  onSelectRole,
 }) => {
   const { t, lang } = useLanguage();
   const isAdmin = currentUser.role === 'ADMIN' || (currentUser.role as string) === 'IT_ADMIN';
 
   // Specific navigation items for Admin vs Legal / VDR Actors
-  const adminNavItems: { id: NavTab; label: string; icon: string; iconColor: string; badge?: number }[] = [
-    { id: 'admin-console', label: lang === 'vi' ? 'Bảng Điều Khiển Đám Mây' : 'Cloud Infrastructure Console', icon: 'terminal', iconColor: 'text-rose-600' },
-    { id: 'evidence-matrix', label: lang === 'vi' ? 'Kho Lưu Trữ Đã Mã Hóa' : 'Encrypted Storage Matrix', icon: 'folder_supervised', iconColor: 'text-blue-600' },
-    { id: 'privilege-and-redaction', label: lang === 'vi' ? 'Tường Lửa Zero-Authority' : 'Zero Authority Firewall', icon: 'lock_reset', iconColor: 'text-amber-600' },
-    { id: 'immutable-audit-trail', label: lang === 'vi' ? 'Nhật Ký Merkle Enclave' : 'Immutable Audit Trail', icon: 'receipt_long', iconColor: 'text-emerald-600' },
+  const adminNavItems: NavItem[] = [
+    { id: 'admin-console', label: lang === 'vi' ? 'Hạ Tầng & Tường Lửa' : 'Server Infrastructure', icon: 'terminal' },
+    { id: 'evidence-matrix', label: lang === 'vi' ? 'Kho Hồ Sơ Niêm Phong' : 'Encrypted Storage', icon: 'folder_supervised' },
   ];
 
-  const legalNavItems: { id: NavTab; label: string; icon: string; iconColor: string; badge?: number }[] = [
-    { id: 'evidence-matrix', label: t.navEvidenceMatrix, icon: 'folder_supervised', iconColor: 'text-blue-600' },
-    { id: 'quorum-approvals', label: t.navQuorumApprovals, icon: 'how_to_reg', iconColor: 'text-amber-600', badge: pendingQuorumCount },
-    { id: 'privilege-and-redaction', label: t.navPrivilegeRedaction, icon: 'lock_reset', iconColor: 'text-rose-600' },
-    { id: 'immutable-audit-trail', label: t.navImmutableAuditTrail, icon: 'receipt_long', iconColor: 'text-emerald-600' },
-    { id: 'litigation-holds', label: t.navLitigationHolds, icon: 'gavel', iconColor: 'text-indigo-600' },
+  const legalNavItems: NavItem[] = [
+    { id: 'evidence-matrix', label: t.navEvidenceMatrix, icon: 'folder_supervised' },
+    { id: 'quorum-approvals', label: t.navQuorumApprovals, icon: 'how_to_reg', badge: pendingQuorumCount },
   ];
 
   const activeNavItems = isAdmin ? adminNavItems : legalNavItems;
 
+  const usersList = allUsers ? Object.values(allUsers) : [];
+
   return (
     <aside
       className={`fixed left-0 top-16 bottom-0 ${
-        isCollapsed ? 'w-20' : 'w-72'
-      } bg-white z-40 flex flex-col justify-between py-6 border-r border-slate-200 shadow-[0_2px_12px_rgba(15,23,42,0.04)] transition-all duration-300 ease-in-out`}
+        isCollapsed ? 'w-20' : 'w-64'
+      } bg-white z-40 flex flex-col justify-between py-4 border-r border-[#E2E8F0] shadow-[0_1px_3px_rgba(15,23,42,0.04)] transition-all duration-300 ease-in-out`}
     >
-      <div className={isCollapsed ? 'px-2' : 'px-4'}>
+      {/* Top Section: Navigation Links */}
+      <div className={`flex-1 overflow-y-auto ${isCollapsed ? 'px-2' : 'px-4'}`}>
         {/* Category Header with Collapse / Expand Icon */}
         <div className={`px-2 pb-3 mb-2 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
           {!isCollapsed && (
-            <span className="text-[11px] uppercase tracking-wider font-black text-slate-500 truncate">
-              {isAdmin ? (lang === 'vi' ? 'HẠ TẦNG (ADMIN)' : 'HYPERVISOR (ADMIN)') : t.vdrTitle}
+            <span className="text-[11px] uppercase tracking-wider font-bold text-[#475569] truncate">
+              {isAdmin ? (lang === 'vi' ? 'HẠ TẦNG MÁY CHỦ' : 'SERVER INFRASTRUCTURE') : t.vdrTitle}
             </span>
           )}
           <div className="flex items-center gap-1.5">
             {!isCollapsed && (
               <span
-                className={`w-2 h-2 rounded-full animate-pulse ${isAdmin ? 'bg-rose-500' : 'bg-emerald-500'}`}
-                title={isAdmin ? 'Hypervisor Root Verified' : 'VDR Enclave Live'}
+                className={`w-2 h-2 rounded-full ${isAdmin ? 'bg-[#DC2626] animate-pulse' : 'bg-[#0D9488]'}`}
+                title={isAdmin ? 'Admin Mode (0% Authority)' : 'Protected Sovereign Mode'}
               />
             )}
             <button
               onClick={onToggleCollapse}
               type="button"
-              className="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-100 flex items-center justify-center transition cursor-pointer shadow-2xs"
+              className="w-7 h-7 rounded-md text-[#475569] hover:text-[#0F172A] hover:bg-[#F1F5F9] flex items-center justify-center transition cursor-pointer"
               title={
                 isCollapsed
                   ? lang === 'vi'
-                    ? 'Mở rộng tab'
+                    ? 'Mở rộng thanh menu'
                     : 'Expand sidebar'
                   : lang === 'vi'
-                  ? 'Thu gọn tab'
+                  ? 'Thu gọn thanh menu'
                   : 'Collapse sidebar'
               }
             >
-              <span className="material-symbols-outlined text-[20px]">
+              <span className="material-symbols-outlined text-[19px]">
                 {isCollapsed ? 'last_page' : 'first_page'}
               </span>
             </button>
           </div>
         </div>
 
-        {/* Navigation Items with Rich Color Contrast */}
-        <nav className="flex flex-col gap-1.5">
+        {/* Navigation Items */}
+        <nav className="flex flex-col gap-1">
           {activeNavItems.map((item) => {
             const isActive = currentTab === item.id;
             return (
@@ -97,15 +106,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 } rounded-xl text-sm transition-all duration-150 relative cursor-pointer ${
                   isActive
                     ? isAdmin
-                      ? 'bg-rose-700 text-white font-bold shadow-[0_4px_12px_rgba(190,18,60,0.28)]'
-                      : 'bg-[#1E3A8A] text-white font-bold shadow-[0_4px_12px_rgba(30,58,138,0.28)]'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 font-medium'
+                      ? 'bg-[#991B1B] text-white font-semibold shadow-xs'
+                      : 'bg-[#1E3A8A] text-white font-semibold shadow-xs'
+                    : 'text-[#475569] hover:text-[#0F172A] hover:bg-[#F1F5F9] font-medium'
                 }`}
               >
                 <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} w-full`}>
                   <span
                     className={`material-symbols-outlined text-[20px] shrink-0 transition-colors ${
-                      isActive ? 'text-white' : item.iconColor
+                      isActive ? 'text-white' : 'text-[#475569]'
                     }`}
                   >
                     {item.icon}
@@ -123,8 +132,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         : 'px-2 py-0.5 rounded-full text-[11px]'
                     } font-bold ${
                       isActive
-                        ? 'bg-amber-400 text-slate-950 shadow-sm'
-                        : 'bg-amber-100 text-amber-800 border border-amber-300'
+                        ? 'bg-white text-[#1E3A8A] shadow-xs'
+                        : 'bg-[#FFFBEB] text-[#B45309] border border-[#FEF3C7]'
                     }`}
                   >
                     {item.badge}
@@ -136,77 +145,102 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </nav>
       </div>
 
-      {/* Bottom Persona & Authority Status Box */}
-      <div className={isCollapsed ? 'px-2' : 'px-5'}>
+      {/* Bottom Section: Demo Personas Switcher & Cryptographic Security Status */}
+      <div className={`shrink-0 ${isCollapsed ? 'px-2 pt-3 border-t border-[#E2E8F0]' : 'px-4 pt-3 border-t border-[#E2E8F0]'}`}>
         {isCollapsed ? (
-          <div
-            className={`flex flex-col items-center justify-center p-2.5 rounded-xl border shadow-xs cursor-pointer ${
-              isAdmin ? 'bg-rose-50 border-rose-200 text-rose-700' : 'bg-blue-50 border-blue-200 text-[#1E3A8A]'
-            }`}
-            onClick={onToggleCollapse}
-            title={
-              isAdmin
-                ? 'Zero Data Authority Enforced (Click to expand)'
-                : `${currentUser.roleDescription} (Click to expand)`
-            }
-          >
-            <span className="material-symbols-outlined text-[20px]">
-              {isAdmin ? 'gpp_bad' : 'verified_user'}
-            </span>
-            <span
-              className={`w-1.5 h-1.5 rounded-full mt-1 animate-pulse ${
-                isAdmin ? 'bg-rose-600' : 'bg-emerald-500'
-              }`}
-            />
-          </div>
-        ) : isAdmin ? (
-          <div className="p-3.5 rounded-xl bg-gradient-to-br from-rose-50 to-orange-50/50 border border-rose-200 shadow-xs flex flex-col gap-1.5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-rose-800 text-xs font-bold">
-                <span className="material-symbols-outlined text-[16px] text-rose-600">gpp_bad</span>
-                <span className="uppercase tracking-wider">Zero Authority</span>
-              </div>
-              <span className="w-2 h-2 rounded-full bg-rose-600 animate-pulse" />
-            </div>
+          /* Collapsed View: Compact Vertical Icon Stack for 1-Click Role Switch */
+          <div className="flex flex-col items-center gap-1.5">
+            {usersList.map((u) => {
+              const isActive = u.role === currentUser.role;
+              const isItAdmin = u.role === 'ADMIN' || (u.role as string) === 'IT_ADMIN';
 
-            <p className="font-mono text-[11px] font-bold text-rose-700 bg-white/90 px-2 py-1 rounded border border-rose-200">
-              Plaintext Keys: 0 in memory
-            </p>
+              const roleIcon =
+                u.role === 'LEAD_COUNSEL' ? 'gavel' :
+                u.role === 'SURVIVOR_CLIENT' ? 'shield_person' :
+                isItAdmin ? 'admin_panel_settings' : 'biotech';
 
-            <div className="flex items-center gap-1 text-[11px] text-slate-600 font-medium">
-              <span className="material-symbols-outlined text-[14px] text-amber-600">lock</span>
-              <span>Hypervisor Root (Blinded)</span>
-            </div>
+              return (
+                <button
+                  key={u.id}
+                  onClick={() => onSelectRole?.(u.role)}
+                  type="button"
+                  title={`${u.name} (${u.roleDescription})`}
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer relative ${
+                    isActive
+                      ? isItAdmin
+                        ? 'bg-[#991B1B] text-white shadow-xs'
+                        : 'bg-[#1E3A8A] text-white shadow-xs'
+                      : 'text-[#64748B] hover:text-[#0F172A] hover:bg-[#F1F5F9]'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[19px]">
+                    {roleIcon}
+                  </span>
+                  {isActive && (
+                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#0F766E] ring-2 ring-white animate-pulse" />
+                  )}
+                </button>
+              );
+            })}
           </div>
         ) : (
-          <div className="p-3.5 rounded-xl bg-gradient-to-br from-slate-50 to-blue-50/50 border border-blue-100 shadow-sm flex flex-col gap-1.5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-[#1E3A8A] text-xs font-bold">
-                <span className="material-symbols-outlined text-[16px] text-blue-600">verified_user</span>
-                <span className="uppercase tracking-wider">
-                  {currentUser.role === 'SURVIVOR_CLIENT' ? 'Sovereign Vault' : 'Session Seal'}
-                </span>
-              </div>
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          /* Expanded View: Dedicated Demo Persona Panel & Zero-Authority Seal */
+          <div className="flex flex-col gap-2.5">
+            {/* Header of the Persona Panel */}
+            <div className="flex items-center justify-between px-1">
+              <span className="text-[10.5px] uppercase tracking-wider font-bold text-[#475569] flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[14px] text-[#1E3A8A]">switch_account</span>
+                <span>{lang === 'vi' ? 'CHUYỂN VAI TRÒ DEMO' : 'DEMO PERSONAS'}</span>
+              </span>
+              <span className="text-[10px] font-bold text-[#0D9488] bg-[#F0FDFA] px-1.5 py-0.5 rounded border border-[#CCFBF1]">
+                4 Roles
+              </span>
             </div>
 
-            <p className="font-mono text-xs font-semibold text-slate-700 bg-white/80 px-2 py-1 rounded border border-slate-200">
-              {currentUser.role === 'SURVIVOR_CLIENT' 
-                ? 'Consent: 100% Required' 
-                : currentUser.role === 'FORENSIC_EXPERT' 
-                ? '1-Time Ephemeral TTL' 
-                : 'SHA-256: 8f3c...b049'}
-            </p>
+            {/* List of 4 Roles with 1-Click Switching */}
+            <div className="flex flex-col gap-1 bg-[#F8FAFC] p-1.5 rounded-xl border border-[#E2E8F0]">
+              {usersList.map((u) => {
+                const isActive = u.role === currentUser.role;
+                const isItAdmin = u.role === 'ADMIN' || (u.role as string) === 'IT_ADMIN';
 
-            <div className="flex items-center gap-1 text-[11px] text-emerald-700 font-semibold">
-              <span className="material-symbols-outlined text-[14px]">check_circle</span>
-              <span>
-                {currentUser.role === 'SURVIVOR_CLIENT'
-                  ? 'Sovereign Root Authority'
-                  : currentUser.role === 'FORENSIC_EXPERT'
-                  ? 'Hardware Token Authenticated'
-                  : 'F.R.C.P. 26(c) Protected'}
-              </span>
+                const shortLabel =
+                  u.role === 'LEAD_COUNSEL' ? t.roleCounsel :
+                  u.role === 'SURVIVOR_CLIENT' ? t.roleSurvivor :
+                  isItAdmin ? t.roleAdmin :
+                  u.role === 'FORENSIC_EXPERT' ? t.roleExpert : t.roleDefense;
+
+                const roleIcon =
+                  u.role === 'LEAD_COUNSEL' ? 'gavel' :
+                  u.role === 'SURVIVOR_CLIENT' ? 'shield_person' :
+                  isItAdmin ? 'admin_panel_settings' : 'biotech';
+
+                return (
+                  <button
+                    key={u.id}
+                    onClick={() => onSelectRole?.(u.role)}
+                    type="button"
+                    title={u.roleDescription}
+                    className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer text-left ${
+                      isActive
+                        ? isItAdmin
+                          ? 'bg-[#991B1B] text-white shadow-2xs font-semibold'
+                          : 'bg-[#1E3A8A] text-white shadow-2xs font-semibold'
+                        : 'text-[#475569] hover:text-[#0F172A] hover:bg-white'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 truncate">
+                      <span className={`material-symbols-outlined text-[16px] shrink-0 ${isActive ? 'text-white' : 'text-[#64748B]'}`}>
+                        {roleIcon}
+                      </span>
+                      <span className="truncate">{shortLabel}</span>
+                    </div>
+
+                    {isActive && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse shrink-0 ml-1" />
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}

@@ -6,6 +6,9 @@ import { ForsetiEngine } from './forsetiEngine';
 export interface DecryptionResult {
   success: boolean;
   content?: string;
+  pdfBytes?: Uint8Array;
+  isPdf?: boolean;
+  fileName?: string;
   errorCode?: 'ADMIN_NO_DATA_AUTHORITY' | 'QUORUM_REQUIRED' | 'UNAUTHORIZED_OPPONENT' | 'WEBCRYPTO_OPERATION_ERROR';
   errorMessage?: string;
   technicalDetails?: string;
@@ -34,12 +37,18 @@ export class TideCloakMatterService {
     const matchingQuorum = quorumRequests.find(q => q.targetDocumentId === document.id);
     const activeSignatures = matchingQuorum ? matchingQuorum.approvals : [];
 
-    // 2. Thẩm định qua Forseti Policy Engine (Trụ cột 4 - Hợp đồng C#)
+    // 2. Thẩm định qua Forseti Policy Engine (Trụ cột 4 - Hợp đồng C# theo chuẩn C0, C1, C2)
+    const effectiveClassification = document.dataClass || document.classification || 'C2';
     const forsetiEvaluation = await tidecloak.validateWithForseti(
       document.id,
-      document.classification || 'STRICT_PRIVILEGE',
+      effectiveClassification,
       document.encryptedHash,
-      activeSignatures
+      activeSignatures,
+      {
+        threshold: matchingQuorum?.threshold || 3,
+        requiredRoles: (matchingQuorum?.requiredRoles as string[]) || ['SURVIVOR_CLIENT', 'LEAD_COUNSEL', 'GUARDIAN'],
+        isGuardianConflicted: matchingQuorum?.isGuardianConflicted || false
+      }
     );
 
     // KỊCH BẢN CHÍNH: SYSADMIN CỐ TÌNH TRUY CẬP (NEGATIVE TEST ĂN ĐIỂM BẮT BUỘC)
@@ -67,12 +76,13 @@ export class TideCloakMatterService {
     if (!forsetiEvaluation.allowed) {
       const latencyMs = Math.round(performance.now() - startTime);
 
-      if (document.classification === 'RESTRICTED_EXPERT' && currentUser.role === 'FORENSIC_EXPERT') {
+      if ((document.dataClass === 'C2' || document.classification === 'RESTRICTED_EXPERT') && currentUser.role === 'FORENSIC_EXPERT') {
+        const threshold = matchingQuorum?.threshold || 3;
         return {
           success: false,
           errorCode: 'QUORUM_REQUIRED',
-          errorMessage: 'CRYPTOGRAPHIC LOCK: Quorum Consensus Required.',
-          technicalDetails: `[FORSETI_INVARIANT_4_PENDING] Threshold: 2 signoffs required (Survivor Jane Doe + Lead Counsel). Currently signed: ${activeSignatures.length}/2. Secret key derivation mathematically impossible.`,
+          errorMessage: 'CRYPTOGRAPHIC LOCK: All-Keyholders Quorum Consensus Required.',
+          technicalDetails: `[${forsetiEvaluation.invariantTriggered}] Threshold: ${threshold} signoffs required from Keyholders (Survivor + Lead Counsel + Guardian). Currently signed: ${activeSignatures.length}/${threshold}. Secret key derivation mathematically impossible.`,
           latencyMs,
           algorithm: 'AES-256-GCM (Locked)',
           realCryptoVerified: true,
@@ -96,11 +106,21 @@ export class TideCloakMatterService {
 
     // 3. Forseti cho phép -> Tiến hành giải mã WebCrypto AES-256-GCM qua TideCloak SDK
     let decryptedText = document.decryptedContent;
+    let decryptedPdfBytes: Uint8Array | undefined;
+    let isPdfDoc = document.isPdf || document.encryptedPayload?.isPdf || false;
 
     if (document.encryptedPayload) {
       const decryptResult = await tidecloak.doDecrypt(document.encryptedPayload, activeSignatures);
-      if (decryptResult.success && decryptResult.plaintext) {
-        decryptedText = decryptResult.plaintext;
+      if (decryptResult.success) {
+        if (decryptResult.binaryData) {
+          decryptedPdfBytes = decryptResult.binaryData;
+        }
+        if (decryptResult.plaintext) {
+          decryptedText = decryptResult.plaintext;
+        }
+        if (decryptResult.isPdf) {
+          isPdfDoc = true;
+        }
       }
     }
 
@@ -108,6 +128,9 @@ export class TideCloakMatterService {
     return {
       success: true,
       content: decryptedText,
+      pdfBytes: decryptedPdfBytes,
+      isPdf: isPdfDoc,
+      fileName: document.fileName || document.encryptedPayload?.fileName,
       technicalDetails: `[FORSETI_ATTESTED_ALLOW] Identity role '${currentUser.role}' granted access under ${forsetiEvaluation.invariantTriggered}. Ephemeral key synthesized and verified via WebCrypto AES-256-GCM in ${latencyMs}ms.`,
       latencyMs,
       algorithm: 'AES-256-GCM (Hardware Enclave)',

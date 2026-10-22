@@ -5,7 +5,8 @@
   "language": "C# (.NET 8 Tide Forseti Runtime)",
   "sha512": "092da0aa8a33722296d637b2ec0c6864fdfd93092b9acd0abf4bb84039fddacb43ac1283c3cdc8db39fc8e4044dc84ec0c65bea38388a85331cf3afa5249c182",
   "orkConsensusThreshold": "5-of-7",
-  "quorumRequirement": "2-of-2:SURVIVOR_CLIENT+LEAD_COUNSEL",
+  "quorumRequirement": "3-of-3:ALL-KEYHOLDERS(SURVIVOR+COUNSEL+GUARDIAN)",
+  "dataClassificationModel": "C0-C1-C2-BRAINSTORM-2.0",
   "zeroDataAuthorityEnforced": true,
   "status": "ATTESTED_AND_SEALED"
 }

@@ -1,21 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { UserRole, NavTab, MatterDocument, QuorumRequest, AuditLogEntry } from './types/matter';
 import { MOCK_USERS, MOCK_DOCUMENTS, INITIAL_QUORUM_REQUESTS, INITIAL_AUDIT_LOGS } from './data/mockMatterData';
 import { TideCloakMatterService, DecryptionResult } from './lib/tidecloak';
 import { tidecloak } from './lib/tidecloakSdk';
-import { RealCryptoEngine } from './lib/cryptoEngine';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
 import { QuorumApprovalsView } from './components/views/QuorumApprovalsView';
 import { EvidenceMatrixView } from './components/views/EvidenceMatrixView';
-import { PrivilegeRedactionView } from './components/views/PrivilegeRedactionView';
-import { ImmutableAuditTrailView } from './components/views/ImmutableAuditTrailView';
-import { LitigationHoldsView } from './components/views/LitigationHoldsView';
 import { AdminConsoleView } from './components/views/AdminConsoleView';
 import { DocumentViewerModal } from './components/DocumentViewerModal';
 import { EnclaveInspectorModal } from './components/EnclaveInspectorModal';
 import { UploadModal } from './components/UploadModal';
 import { AuthenticationModal } from './components/AuthenticationModal';
+import { UserProfileModal } from './components/UserProfileModal';
 
 export const App: React.FC = () => {
   // Tab 'quorum-approvals' as initial view matches Image 1 directly
@@ -23,7 +20,7 @@ export const App: React.FC = () => {
   const [currentUserRole, setCurrentUserRole] = useState<UserRole>('LEAD_COUNSEL');
   const [documents, setDocuments] = useState<MatterDocument[]>(MOCK_DOCUMENTS);
   const [quorumRequests, setQuorumRequests] = useState<QuorumRequest[]>(INITIAL_QUORUM_REQUESTS);
-  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>(INITIAL_AUDIT_LOGS);
+  const [, setAuditLogs] = useState<AuditLogEntry[]>(INITIAL_AUDIT_LOGS);
 
   // Modal state for viewing decrypted documents or refusal details
   const [selectedDoc, setSelectedDoc] = useState<MatterDocument | null>(null);
@@ -31,6 +28,9 @@ export const App: React.FC = () => {
 
   // Enclave & Architecture Inspector Modal
   const [isEnclaveInspectorOpen, setIsEnclaveInspectorOpen] = useState(false);
+
+  // User Profile & Cryptographic Settings Modal
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   // Survivor Upload Modal State
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -41,46 +41,6 @@ export const App: React.FC = () => {
 
   // Left Sidebar Collapsible State
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-
-  // Khởi tạo mã hóa WebCrypto AES-256-GCM thật cho tất cả tài liệu ban đầu
-  useEffect(() => {
-    let isMounted = true;
-    const initializeEncryptedVault = async () => {
-      try {
-        const encryptedList = await Promise.all(
-          MOCK_DOCUMENTS.map(async (doc) => {
-            let seed: string | null = null;
-            if (doc.id === 'doc_01') {
-              seed = RealCryptoEngine.getRoleSeed('DISCOVERY_PUBLIC');
-            } else if (doc.id === 'doc_02') {
-              seed = RealCryptoEngine.getRoleSeed('LEAD_COUNSEL');
-            } else if (doc.id === 'doc_03') {
-              // Yêu cầu chữ ký Quorum 2-of-2 (Jane Doe + Elena Howard)
-              seed = RealCryptoEngine.synthesizeQuorumKey([
-                { signerRole: 'SURVIVOR_CLIENT', signatureHash: '0x71a2ce89' },
-                { signerRole: 'LEAD_COUNSEL', signatureHash: '0x4f8e9a02' }
-              ]);
-            } else if (doc.id === 'doc_04') {
-              seed = RealCryptoEngine.getRoleSeed('SURVIVOR_CLIENT');
-            }
-
-            if (seed) {
-              const payload = await RealCryptoEngine.encryptRecord(doc.decryptedContent, seed);
-              return { ...doc, encryptedPayload: payload };
-            }
-            return doc;
-          })
-        );
-        if (isMounted) {
-          setDocuments(encryptedList);
-        }
-      } catch (err) {
-        console.warn('WebCrypto auto-encryption fallback:', err);
-      }
-    };
-    initializeEncryptedVault();
-    return () => { isMounted = false; };
-  }, []);
 
   const currentUser = MOCK_USERS[currentUserRole];
   const pendingQuorumCount = quorumRequests.filter(q => q.status === 'PENDING').length;
@@ -125,7 +85,7 @@ export const App: React.FC = () => {
 
     // Stakeholders requesting sensitive Level 3 or Level 4 docs must authenticate (Biometric + Scope agreement)
     const isRestrictedLevel = doc.securityLevel === 'LEVEL_3_HIGHLY_SENSITIVE' || doc.securityLevel === 'LEVEL_4_CRITICAL';
-    const isStakeholder = currentUser.role === 'FORENSIC_EXPERT' || currentUser.role === 'OPPOSING_COUNSEL';
+    const isStakeholder = currentUser.role === 'FORENSIC_EXPERT';
 
     if (isRestrictedLevel && isStakeholder) {
       setPendingAuthDoc(doc);
@@ -211,16 +171,12 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-surface text-on-surface flex flex-col font-sans">
+    <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] flex flex-col font-sans">
       
       {/* Top Header Navbar */}
       <Navbar
         currentUser={currentUser}
-        allUsers={MOCK_USERS}
-        onSelectRole={handleSelectRole}
-        onOpenEnclaveInspector={() => setIsEnclaveInspectorOpen(true)}
-        isSidebarCollapsed={isSidebarCollapsed}
-        onToggleSidebar={() => setIsSidebarCollapsed(prev => !prev)}
+        onOpenProfileSettings={() => setIsProfileModalOpen(true)}
       />
 
       {/* Left Sidebar for Virtual Data Room Navigation */}
@@ -229,13 +185,15 @@ export const App: React.FC = () => {
         onSelectTab={setCurrentTab}
         pendingQuorumCount={pendingQuorumCount}
         currentUser={currentUser}
+        allUsers={MOCK_USERS}
+        onSelectRole={handleSelectRole}
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
       />
 
       {/* Main Content Area (Responsive padding for collapsible sidebar) */}
-      <div className={`${isSidebarCollapsed ? 'pl-20' : 'pl-72'} pt-16 min-h-screen bg-slate-50/60 transition-all duration-300 ease-in-out`}>
-        <main className="p-6 sm:p-8">
+      <div className={`${isSidebarCollapsed ? 'pl-20' : 'pl-64'} pt-16 min-h-screen bg-[#F8FAFC] transition-all duration-300 ease-in-out min-w-0 overflow-x-hidden`}>
+        <main className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full min-w-0">
           
           {/* Admin Console View (Dedicated view when Admin persona is active or on admin-console tab) */}
           {currentTab === 'admin-console' && (
@@ -244,6 +202,7 @@ export const App: React.FC = () => {
               documents={documents}
               onLogAudit={handleLogTamper}
               onAttemptDecrypt={handleOpenDocument}
+              onOpenEnclaveInspector={() => setIsEnclaveInspectorOpen(true)}
             />
           )}
 
@@ -266,27 +225,6 @@ export const App: React.FC = () => {
               onOpenQuorumView={() => setCurrentTab('quorum-approvals')}
               onOpenUploadModal={() => setIsUploadModalOpen(true)}
             />
-          )}
-
-          {/* Tab 3: Privilege & Redaction (Zero Data Authority & Sysadmin Firewall) */}
-          {currentTab === 'privilege-and-redaction' && (
-            <PrivilegeRedactionView
-              currentUser={currentUser}
-              onLogAudit={handleLogTamper}
-            />
-          )}
-
-          {/* Tab 4: Immutable Audit Trail (Merkle Consensus & Ledger) */}
-          {currentTab === 'immutable-audit-trail' && (
-            <ImmutableAuditTrailView
-              auditLogs={auditLogs}
-              documents={documents}
-            />
-          )}
-
-          {/* Tab 5: Litigation Holds (Court Orders & Decrypted Forensic Exhibit) */}
-          {currentTab === 'litigation-holds' && (
-            <LitigationHoldsView />
           )}
 
         </main>
@@ -327,6 +265,15 @@ export const App: React.FC = () => {
         document={pendingAuthDoc}
         currentUser={currentUser}
         onAuthenticationComplete={handleAuthenticationComplete}
+      />
+
+      {/* User Profile & Cryptographic Enclave Settings Modal */}
+      <UserProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        currentUser={currentUser}
+        allUsers={MOCK_USERS}
+        onSelectRole={handleSelectRole}
       />
 
     </div>

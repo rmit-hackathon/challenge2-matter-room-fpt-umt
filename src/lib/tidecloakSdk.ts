@@ -188,9 +188,14 @@ export class TideCloakSDK {
    */
   public async validateWithForseti(
     documentId: string,
-    classification: 'DISCOVERY' | 'RESTRICTED_EXPERT' | 'STRICT_PRIVILEGE',
+    classification: string,
     sha256Hash: string,
-    quorumSignatures: { signerRole: string }[]
+    quorumSignatures: { signerRole: string }[],
+    options?: {
+      requiredRoles?: string[];
+      threshold?: number;
+      isGuardianConflicted?: boolean;
+    }
   ) {
     const caller: CallerContext = {
       userId: this.currentUserId,
@@ -206,22 +211,23 @@ export class TideCloakSDK {
     };
 
     const quorum: QuorumState = {
-      threshold: 2,
+      threshold: options?.threshold ?? (options?.requiredRoles?.length || 3),
       signedCount: quorumSignatures.length,
-      requiredRoles: ['SURVIVOR_CLIENT', 'LEAD_COUNSEL'],
-      activeSignerRoles: quorumSignatures.map(s => s.signerRole)
+      requiredRoles: options?.requiredRoles ?? ['SURVIVOR_CLIENT', 'LEAD_COUNSEL', 'GUARDIAN'],
+      activeSignerRoles: quorumSignatures.map(s => s.signerRole),
+      isGuardianConflicted: options?.isGuardianConflicted ?? false
     };
 
     return ForsetiEngine.evaluatePolicy(caller, resource, quorum);
   }
 
   /**
-   * Giải mã bản ghi theo chuẩn doDecrypt của TideCloak SDK
+   * Giải mã bản ghi theo chuẩn doDecrypt của TideCloak SDK (Hỗ trợ cả Text lẫn Binary PDF)
    */
   public async doDecrypt(
-    payload: { cipherHex: string; ivHex: string; saltHex: string; tagHex: string },
+    payload: { cipherHex: string; ivHex: string; saltHex: string; tagHex: string; isPdf?: boolean; fileName?: string; mimeType?: string },
     requiredSignatures?: { signerRole: string; hash?: string; signatureHash?: string }[]
-  ): Promise<{ success: boolean; plaintext?: string; error?: string; latencyMs?: number }> {
+  ): Promise<{ success: boolean; plaintext?: string; binaryData?: Uint8Array; isPdf?: boolean; fileName?: string; error?: string; latencyMs?: number }> {
     let derivedSeed = RealCryptoEngine.getRoleSeed(this.currentRole);
 
     if (requiredSignatures && requiredSignatures.length > 0) {
@@ -231,21 +237,54 @@ export class TideCloakSDK {
       }
     }
 
-    return await RealCryptoEngine.decryptRecord({
+    const binaryRes = await RealCryptoEngine.decryptBinary({
       cipherHex: payload.cipherHex,
       ivHex: payload.ivHex,
       saltHex: payload.saltHex,
       tagHex: payload.tagHex,
-      classification: 'IMMUNITY_SEALED'
+      classification: 'IMMUNITY_SEALED',
+      isPdf: payload.isPdf,
+      fileName: payload.fileName,
+      mimeType: payload.mimeType
     }, derivedSeed);
+
+    if (!binaryRes.success || !binaryRes.data) {
+      return {
+        success: false,
+        error: binaryRes.error,
+        latencyMs: binaryRes.latencyMs
+      };
+    }
+
+    const isPdf = payload.isPdf ?? false;
+    let plaintext: string | undefined;
+
+    try {
+      const decoder = new TextDecoder('utf-8', { fatal: false });
+      plaintext = decoder.decode(binaryRes.data);
+    } catch {
+      plaintext = `[BINARY_ENCLAVE_DOCUMENT: ${payload.fileName || 'file.bin'}]`;
+    }
+
+    return {
+      success: true,
+      plaintext,
+      binaryData: binaryRes.data,
+      isPdf,
+      fileName: payload.fileName,
+      latencyMs: binaryRes.latencyMs
+    };
   }
 
   /**
    * Mã hóa bản ghi theo chuẩn doEncrypt của TideCloak SDK
    */
-  public async doEncrypt(plaintext: string, secretSeed?: string) {
+  public async doEncrypt(data: string | ArrayBuffer | Uint8Array, secretSeed?: string, metadata?: { isPdf?: boolean; fileName?: string; mimeType?: string }) {
     const seed = secretSeed || RealCryptoEngine.getRoleSeed(this.currentRole) || 'DEFAULT_TIDE_SEED';
-    return await RealCryptoEngine.encryptRecord(plaintext, seed);
+    if (typeof data === 'string') {
+      return await RealCryptoEngine.encryptRecord(data, seed);
+    }
+    return await RealCryptoEngine.encryptBinary(data, seed, metadata);
   }
 }
 

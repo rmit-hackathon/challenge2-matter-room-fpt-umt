@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { QuorumRequest, UserProfile } from '../../types/matter';
 import { useLanguage } from '../../context/LanguageContext';
+import { LegalBadge } from '../common/LegalBadge';
+import { LegalCard } from '../common/LegalCard';
 
 interface QuorumApprovalsViewProps {
   quorumRequests: QuorumRequest[];
@@ -13,278 +15,273 @@ export const QuorumApprovalsView: React.FC<QuorumApprovalsViewProps> = ({
   currentUser,
   onApproveQuorum,
 }) => {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [isBroadcasting, setIsBroadcasting] = useState(false);
-  const req = quorumRequests[0];
-  const isApproved = req?.status === 'APPROVED' || (req && req.approvals.length >= req.threshold);
+
+  const activeReq = quorumRequests[0] || {
+    id: 'req_01',
+    targetDocumentId: 'doc_03',
+    targetDocumentTitle: 'Exhibit B: Trauma & Medical Evaluation (Sealed)',
+    requestedBy: 'Dr. Miriam Vance, M.D.',
+    requestedFor: 'Medical Evidence for Court Hearing',
+    requestedRole: 'FORENSIC_EXPERT',
+    reason: 'Court Protective Order 2026-CV-04421 requires medical verification of bodily injuries.',
+    status: 'PENDING',
+    approvals: [
+      {
+        signerId: 'user_02',
+        signerName: 'Jane Doe',
+        signerRole: 'SURVIVOR_CLIENT',
+        timestamp: '2026-10-22 10:15:32',
+        signatureHash: '0x71a2ce89'
+      }
+    ],
+    threshold: 2
+  };
+
+  const isApproved = activeReq.status === 'APPROVED' || activeReq.approvals.length >= activeReq.threshold;
 
   const handleSign = () => {
     setIsBroadcasting(true);
     setTimeout(() => {
+      onApproveQuorum(activeReq.id);
       setIsBroadcasting(false);
-      onApproveQuorum(req.id);
-    }, 800);
+    }, 600);
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto flex flex-col gap-6">
+    <div className="w-full max-w-5xl mx-auto flex flex-col gap-5 sm:gap-6 font-sans min-w-0">
       
-      {/* Top Action Breadcrumb & Context Navigation */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-slate-600 text-sm">
+      {/* Top Action Breadcrumb */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-2 text-[#475569] text-xs sm:text-sm">
           <span className="material-symbols-outlined text-[18px] text-[#1E3A8A]">gavel</span>
-          <span>Matter 24-CV-8821</span>
-          <span className="text-slate-300">/</span>
-          <span>Escrow Approvals</span>
-          <span className="text-slate-300">/</span>
-          <span className="text-[#1E3A8A] font-extrabold tracking-tight">Docket Key 892-D</span>
+          <span>{lang === 'vi' ? 'Hồ sơ 24-CV-8821' : 'Matter 24-CV-8821'}</span>
+          <span className="text-[#CBD5E1]">/</span>
+          <span className="text-[#1E3A8A] font-semibold">{t.navQuorumApprovals}</span>
+          <span className="text-[#CBD5E1]">/</span>
+          <span className="text-[#0F172A] font-medium">Exhibit B</span>
         </div>
 
-        <div className="flex items-center gap-2 bg-amber-50 border border-amber-300 px-3.5 py-1 rounded-full shadow-sm">
-          <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-          <span className="font-mono text-xs text-amber-900 font-bold">
-            TideCloak Escrow Session #TC-9914
-          </span>
-        </div>
+        <LegalBadge variant="amber" dot pulse size="sm">
+          {t.lockExpires}
+        </LegalBadge>
       </div>
 
-      {/* The Quorum Signoff Centerstage Container */}
-      <div className="w-full bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden">
+      {/* Main Container */}
+      <LegalCard variant="surface" className="overflow-hidden shadow-xs">
         
-        {/* Top Decorative Judicial Stripe with Full Color Gradient */}
-        <div className="h-1.5 w-full bg-gradient-to-r from-[#1E3A8A] via-amber-500 to-emerald-500" />
+        {/* Solid Legal Navy Top Stripe */}
+        <div className="h-1 w-full bg-[#1E3A8A]" />
 
-        <div className="p-8 sm:p-10 flex flex-col gap-7">
+        <div className="p-6 sm:p-8 flex flex-col gap-6">
           
           {/* 1. Header */}
-          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-[#F1F5F9] pb-5">
             <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-amber-100 border border-amber-300 flex items-center justify-center text-amber-800 shadow-sm">
-                <span className="material-symbols-outlined text-[28px]">verified</span>
+              <div className="w-11 h-11 rounded-xl bg-[#EFF6FF] border border-[#BFDBFE] flex items-center justify-center text-[#1E3A8A] shrink-0">
+                <span className="material-symbols-outlined text-[24px]">verified</span>
               </div>
-              <div className="flex flex-col">
+              <div>
                 <div className="flex items-center gap-2.5 flex-wrap">
-                  <h1 className="text-2xl font-extrabold text-[#0F172A] tracking-tight">
+                  <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A] tracking-tight">
                     {t.tideQuorumEscrowTitle}
                   </h1>
                   {isApproved ? (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300 text-xs font-bold">
-                      <span className="w-2 h-2 rounded-full bg-emerald-600" />
-                      <span>{t.quorumCompletedBadge}</span>
-                    </span>
+                    <LegalBadge variant="teal" dot size="sm">
+                      {t.quorumCompletedBadge}
+                    </LegalBadge>
                   ) : (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300 text-xs font-bold shadow-xs">
-                      <span className="w-2 h-2 rounded-full bg-amber-600 animate-ping" />
-                      <span>{t.pendingSignoffBadge}</span>
-                    </span>
+                    <LegalBadge variant="amber" dot pulse size="sm">
+                      {t.pendingSignoffBadge}
+                    </LegalBadge>
                   )}
                 </div>
-                <p className="text-sm text-slate-600 mt-1 font-medium">
+                <p className="text-sm text-[#475569] mt-1 font-normal max-w-2xl leading-relaxed">
                   {t.quorumSubtitle}
                 </p>
               </div>
             </div>
-
-            <div className="flex items-center gap-1.5 bg-slate-100 px-3.5 py-1.5 rounded-lg text-slate-700 font-mono text-xs self-start sm:self-auto border border-slate-200 font-semibold shadow-2xs">
-              <span className="material-symbols-outlined text-[16px] text-amber-600">history_toggle_off</span>
-              <span>{t.lockExpires}</span>
-            </div>
           </div>
 
-          {/* 2. Target Evidence Escrow Manifest */}
-          <div className="bg-slate-50/80 rounded-xl p-5 flex flex-col gap-3.5 border border-slate-200">
+          {/* 2. Target Evidence Manifest */}
+          <div className="bg-[#F8FAFC] rounded-xl p-4 sm:p-5 flex flex-col gap-3 border border-[#E2E8F0]">
             <div className="flex items-center justify-between flex-wrap gap-2">
-              <span className="text-xs uppercase tracking-wider font-extrabold text-slate-700 flex items-center gap-1.5">
+              <span className="text-xs uppercase tracking-wider font-bold text-[#475569] flex items-center gap-1.5">
                 <span className="material-symbols-outlined text-[17px] text-[#1E3A8A]">description</span>
                 <span>{t.targetEvidenceManifest}</span>
               </span>
-              <span className="font-mono text-xs text-[#1E3A8A] bg-white px-2.5 py-1 rounded-md shadow-xs border border-blue-200 font-bold">
+              <span className="font-mono text-xs text-[#475569] bg-white px-2.5 py-0.5 rounded border border-[#E2E8F0]">
                 SHA-256: 4b901a...f89c02
               </span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {/* Card 1: Target Evidence */}
-              <div className="p-4 bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col justify-between">
+              <LegalCard variant="surface" className="p-3.5 flex flex-col justify-between shadow-2xs">
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-500">
+                  <span className="text-[10px] uppercase font-bold text-[#64748B]">
                     {t.targetEvidence}
                   </span>
-                  <p className="font-extrabold text-sm text-slate-900 mt-1 leading-snug">
-                    Exhibit B: Forensic Medical Trauma Evaluation
+                  <p className="font-semibold text-xs sm:text-sm text-[#0F172A] mt-1 leading-snug">
+                    Exhibit B: {lang === 'vi' ? 'Báo cáo Giám định Y khoa & Sang chấn' : 'Forensic Trauma Evaluation'}
                   </p>
                 </div>
-                <div className="mt-3 flex items-center gap-1.5 text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 text-xs font-bold w-fit">
-                  <span className="material-symbols-outlined text-[15px]">attachment</span>
-                  <span>Payload Size: 24.5 MB</span>
+                <div className="mt-2.5 flex items-center gap-1 text-[#475569] bg-[#F1F5F9] px-2 py-0.5 rounded border border-[#E2E8F0] text-xs font-medium w-fit">
+                  <span className="material-symbols-outlined text-[14px]">attachment</span>
+                  <span>24.5 MB</span>
                 </div>
-              </div>
+              </LegalCard>
 
               {/* Card 2: Beneficiary */}
-              <div className="p-4 bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col justify-between">
+              <LegalCard variant="surface" className="p-3.5 flex flex-col justify-between shadow-2xs">
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-500">
+                  <span className="text-[10px] uppercase font-bold text-[#64748B]">
                     {t.beneficiary}
                   </span>
-                  <p className="font-extrabold text-sm text-slate-900 mt-1 leading-snug">
+                  <p className="font-semibold text-xs sm:text-sm text-[#0F172A] mt-1 leading-snug">
                     Dr. Miriam Vance, M.D.
                   </p>
-                  <span className="text-xs text-slate-600 mt-0.5 block font-medium">
-                    Forensic Medical Examiner
+                  <span className="text-xs text-[#475569] mt-0.5 block">
+                    {lang === 'vi' ? 'Bác sĩ Giám định Pháp y' : 'Forensic Medical Examiner'}
                   </span>
                 </div>
-                <div className="mt-3 flex items-center gap-1.5 text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 text-xs font-bold w-fit">
-                  <span className="material-symbols-outlined text-[15px]">verified_user</span>
-                  <span>FIPS 140-2 Level 3 Enclave</span>
+                <div className="mt-2.5">
+                  <LegalBadge variant="teal" size="sm" icon="verified">
+                    {lang === 'vi' ? 'Đã xác thực danh tính' : 'Identity Verified'}
+                  </LegalBadge>
                 </div>
-              </div>
+              </LegalCard>
 
               {/* Card 3: Purpose & Scope */}
-              <div className="p-4 bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col justify-between">
+              <LegalCard variant="surface" className="p-3.5 flex flex-col justify-between shadow-2xs">
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-500">
-                    PURPOSE &amp; SCOPE
+                  <span className="text-[10px] uppercase font-bold text-[#64748B]">
+                    {lang === 'vi' ? 'MỤC ĐÍCH & PHẠM VI' : 'PURPOSE & SCOPE'}
                   </span>
-                  <p className="font-extrabold text-sm text-slate-900 mt-1 leading-snug">
-                    Court-Ordered Independent Trauma Review
+                  <p className="font-semibold text-xs sm:text-sm text-[#0F172A] mt-1 leading-snug">
+                    {lang === 'vi' ? 'Cung cấp chứng cứ y khoa cho Tòa án' : 'Court-Ordered Trauma Review'}
                   </p>
-                  <span className="text-xs text-slate-600 mt-0.5 block font-medium">
-                    Strict limited access under F.R.C.P. 26(c)
+                  <span className="text-xs text-[#475569] mt-0.5 block">
+                    {lang === 'vi' ? 'Theo lệnh bảo vệ của Tòa án' : 'Under Court Protective Order'}
                   </span>
                 </div>
-                <div className="mt-3 flex items-center gap-1.5 text-[#1E3A8A] bg-blue-50 px-2 py-0.5 rounded border border-blue-200 text-xs font-bold w-fit">
-                  <span className="material-symbols-outlined text-[15px]">lock</span>
-                  <span>Watermarked with Ephemeral Token</span>
+                <div className="mt-2.5">
+                  <LegalBadge variant="navy" size="sm" icon="lock">
+                    {lang === 'vi' ? 'Khóa tự hủy sau phiên' : 'Ephemeral Session Key'}
+                  </LegalBadge>
                 </div>
-              </div>
+              </LegalCard>
             </div>
           </div>
 
           {/* 3. Required Signatures Pipeline */}
-          <div className="space-y-3.5">
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-xs font-extrabold uppercase tracking-wider text-[#1E3A8A] flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-[17px]">how_to_reg</span>
+              <h2 className="text-xs font-bold uppercase tracking-wider text-[#475569] flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[17px] text-[#1E3A8A]">how_to_reg</span>
                 <span>{t.requiredSignaturesPipeline}</span>
               </h2>
-              <span className="text-xs text-slate-600 font-bold bg-slate-100 px-2.5 py-0.5 rounded-full border border-slate-200">
+              <span className="text-xs text-[#475569] font-medium bg-[#F1F5F9] px-2.5 py-0.5 rounded-full border border-[#E2E8F0]">
                 {t.strict2of2Consensus}
               </span>
             </div>
 
-            {/* Card 1: Signed (Jane Doe - Survivor / Primary Data Owner) */}
-            <div className="bg-gradient-to-r from-emerald-50/90 via-white to-white rounded-xl p-5 shadow-sm border-2 border-emerald-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-start gap-4">
-                <div className="w-11 h-11 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-md">
-                  <span className="material-symbols-outlined text-[24px]">check</span>
+            {/* Signer 1: Jane Doe (Survivor / Primary Data Owner - Subtle Teal) */}
+            <div className="bg-[#F0FDFA] rounded-xl p-4 shadow-2xs border border-[#CCFBF1] flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div className="flex items-start gap-3.5">
+                <div className="w-10 h-10 rounded-full bg-[#0F766E] text-white flex items-center justify-center shrink-0 shadow-2xs">
+                  <span className="material-symbols-outlined text-[20px]">check</span>
                 </div>
                 <div className="flex flex-col">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-extrabold text-base text-slate-900">Jane Doe</span>
-                    <span className="text-xs text-slate-600 font-semibold">— {t.survivorDataOwner}</span>
-                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-extrabold">
+                    <span className="font-bold text-sm sm:text-base text-[#0F172A]">Jane Doe</span>
+                    <span className="text-xs text-[#475569]">— {t.survivorDataOwner}</span>
+                    <LegalBadge variant="teal" size="sm">
                       {t.signedAndConsented}
-                    </span>
+                    </LegalBadge>
                   </div>
-                  <div className="flex items-center gap-2 mt-1.5 text-slate-600 font-mono text-xs flex-wrap font-medium">
-                    <span className="flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[15px] text-emerald-600">schedule</span>
-                      Signed: 2026-10-22 10:15:32 UTC
-                    </span>
+                  <div className="flex items-center gap-2 mt-1 text-[#475569] text-xs flex-wrap font-medium">
+                    <span>2026-10-22 10:15:32 UTC</span>
                     <span>•</span>
-                    <span>Key Enclave: NE-01 (Verified Token)</span>
-                    <span>•</span>
-                    <span className="text-emerald-700 font-bold">Consent Slot 1 Committed</span>
+                    <span className="text-[#0F766E] font-semibold">{lang === 'vi' ? 'Chữ ký 1 đã xác nhận' : 'Signature 1 Committed'}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5 bg-blue-100 border border-blue-300 px-3.5 py-1.5 rounded-lg self-start md:self-auto text-blue-900 font-mono text-xs font-bold shadow-2xs">
-                <span className="material-symbols-outlined text-[16px] text-blue-700">fingerprint</span>
+              <div className="flex items-center gap-1.5 bg-white border border-[#CCFBF1] px-3 py-1 rounded-lg self-start md:self-auto text-[#0F766E] font-mono text-xs font-semibold">
+                <span className="material-symbols-outlined text-[15px] text-[#0F766E]">fingerprint</span>
                 <span>SIG: 0x9e...2a11</span>
               </div>
             </div>
 
-            {/* Card 2: Lead Counsel (Elena Howard, Esq.) */}
+            {/* Signer 2: Elena Howard, Esq. (Lead Counsel) */}
             <div
-              className={`rounded-xl p-5 shadow-sm border-2 flex flex-col lg:flex-row lg:items-center justify-between gap-5 transition-all ${
+              className={`rounded-xl p-4 shadow-2xs border flex flex-col lg:flex-row lg:items-center justify-between gap-4 transition-all ${
                 isApproved
-                  ? 'bg-gradient-to-r from-emerald-50/90 via-white to-white border-emerald-200'
-                  : 'bg-gradient-to-r from-amber-50/90 via-white to-white border-amber-300 ring-2 ring-amber-100'
+                  ? 'bg-[#F0FDFA] border-[#CCFBF1]'
+                  : 'bg-[#FFFBEB] border-[#FEF3C7]'
               }`}
             >
-              <div className="flex items-start gap-4 max-w-xl">
+              <div className="flex items-start gap-3.5 max-w-xl">
                 <div
-                  className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 shadow-md ${
+                  className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 shadow-2xs ${
                     isApproved
-                      ? 'bg-emerald-500 text-white'
-                      : 'bg-amber-500 text-white'
+                      ? 'bg-[#0F766E] text-white'
+                      : 'bg-[#B45309] text-white'
                   }`}
                 >
-                  <span className="material-symbols-outlined text-[24px]">
-                    {isApproved ? 'check' : 'key'}
+                  <span className="material-symbols-outlined text-[20px]">
+                    {isApproved ? 'check' : 'edit_document'}
                   </span>
                 </div>
                 <div className="flex flex-col">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-extrabold text-base text-[#0F172A]">Elena Howard, Esq.</span>
-                    <span className="text-xs text-slate-600 font-semibold">— {t.leadTrialCounsel}</span>
+                    <span className="font-bold text-sm sm:text-base text-[#0F172A]">Elena Howard, Esq.</span>
+                    <span className="text-xs text-[#475569]">— {t.leadTrialCounsel}</span>
                     {isApproved ? (
-                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-extrabold">
+                      <LegalBadge variant="teal" size="sm">
                         {t.signedAndConsented}
-                      </span>
+                      </LegalBadge>
                     ) : (
-                      <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 text-xs font-extrabold animate-pulse">
+                      <LegalBadge variant="amber" pulse size="sm">
                         {t.actionRequired}
-                      </span>
+                      </LegalBadge>
                     )}
                   </div>
 
-                  <p className="text-xs text-slate-600 mt-1 font-semibold leading-relaxed">
-                    {isApproved
-                      ? t.counselSignedCommitted
-                      : t.counselAwaitingSignoff}
+                  <p className="text-xs text-[#475569] mt-1 font-normal leading-relaxed">
+                    {isApproved ? t.counselSignedCommitted : t.counselAwaitingSignoff}
                   </p>
-
-                  <div className="flex items-center gap-3 mt-2 text-xs flex-wrap font-bold">
-                    <span className="flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                      <span className="material-symbols-outlined text-[15px]">check</span>
-                      Hardware Token Ready
-                    </span>
-                    <span className="flex items-center gap-1 text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-                      <span className="material-symbols-outlined text-[15px]">verified_user</span>
-                      Privileged Authority Validated
-                    </span>
-                  </div>
                 </div>
               </div>
 
               {/* Action Button */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-shrink-0">
+              <div className="flex items-center gap-2 flex-shrink-0">
                 {!isApproved ? (
                   currentUser.role === 'LEAD_COUNSEL' ? (
                     <button
                       onClick={handleSign}
                       disabled={isBroadcasting}
                       type="button"
-                      className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#1E3A8A] text-white hover:bg-[#172554] transition-all duration-200 shadow-lg shadow-blue-900/30 hover:shadow-xl hover:shadow-blue-900/40 active:scale-[0.98] font-bold text-sm"
+                      className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#1E3A8A] text-white hover:bg-[#172554] transition shadow-xs active:scale-[0.98] font-semibold text-xs cursor-pointer"
                     >
-                      <span className="material-symbols-outlined text-[20px]">enhanced_encryption</span>
+                      <span className="material-symbols-outlined text-[16px]">lock_open</span>
                       <span>
                         {isBroadcasting
-                          ? 'Broadcasting Signed Escrow Block...'
+                          ? (lang === 'vi' ? 'Đang gửi chữ ký số...' : 'Signing...')
                           : t.btnSignAuthorize}
                       </span>
                     </button>
                   ) : (
-                    <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-amber-50 text-amber-900 border border-amber-300 text-xs font-bold">
-                      <span className="material-symbols-outlined text-[16px] text-amber-600">info</span>
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white text-[#B45309] border border-[#FEF3C7] text-xs font-medium">
+                      <span className="material-symbols-outlined text-[15px] text-[#B45309]">info</span>
                       <span>{t.switchToCounselPrompt}</span>
                     </div>
                   )
                 ) : (
-                  <div className="flex items-center gap-1.5 bg-blue-100 border border-blue-300 px-3.5 py-1.5 rounded-lg text-blue-900 font-mono text-xs font-bold shadow-2xs">
-                    <span className="material-symbols-outlined text-[16px] text-blue-700">fingerprint</span>
+                  <div className="flex items-center gap-1.5 bg-white border border-[#CCFBF1] px-3 py-1 rounded-lg text-[#0F766E] font-mono text-xs font-semibold">
+                    <span className="material-symbols-outlined text-[15px] text-[#0F766E]">fingerprint</span>
                     <span>SIG: 0x4f...9a02</span>
                   </div>
                 )}
@@ -292,96 +289,65 @@ export const QuorumApprovalsView: React.FC<QuorumApprovalsViewProps> = ({
             </div>
           </div>
 
-          {/* 4. Security Guarantee Badges with High Color Saturation */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 pt-1">
-            <div className="flex items-center gap-3 p-3.5 rounded-xl bg-blue-50/60 border border-blue-200 shadow-2xs">
-              <div className="w-9 h-9 rounded-lg bg-[#1E3A8A] flex items-center justify-center text-white shadow-sm">
-                <span className="material-symbols-outlined text-[20px]">group_work</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[10px] text-blue-900 uppercase font-extrabold tracking-wider">
-                  CONSENSUS MODEL
+          {/* 4. Three Protection Highlights */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+            <LegalCard variant="muted" className="flex items-center gap-3 p-3.5 shadow-2xs">
+              <span className="material-symbols-outlined text-[20px] text-[#1E3A8A]">group_work</span>
+              <div>
+                <span className="text-[11px] font-bold text-[#0F172A] block">
+                  {lang === 'vi' ? 'ĐỒNG THUẬN 2 BÊN' : 'DUAL CONSENSUS'}
                 </span>
-                <span className="text-xs text-slate-900 font-extrabold">2 of 2 Required (100%)</span>
+                <span className="text-xs text-[#475569] block mt-0.5">
+                  {lang === 'vi' ? 'Bắt buộc đủ 2/2 chữ ký mới tạo khóa' : '2 of 2 Signatures Required'}
+                </span>
               </div>
-            </div>
+            </LegalCard>
 
-            <div className="flex items-center gap-3 p-3.5 rounded-xl bg-amber-50/60 border border-amber-200 shadow-2xs">
-              <div className="w-9 h-9 rounded-lg bg-amber-600 flex items-center justify-center text-white shadow-sm">
-                <span className="material-symbols-outlined text-[20px]">timer</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[10px] text-amber-900 uppercase font-extrabold tracking-wider">
-                  KEY LIFESPAN
+            <LegalCard variant="muted" className="flex items-center gap-3 p-3.5 shadow-2xs">
+              <span className="material-symbols-outlined text-[20px] text-[#B45309]">timer</span>
+              <div>
+                <span className="text-[11px] font-bold text-[#0F172A] block">
+                  {lang === 'vi' ? 'KHÓA TỰ HỦY' : 'EPHEMERAL LIFESPAN'}
                 </span>
-                <span className="text-xs text-slate-900 font-extrabold">24h Ephemeral Window</span>
+                <span className="text-xs text-[#475569] block mt-0.5">
+                  {lang === 'vi' ? 'Khóa tự động xóa sau phiên làm việc' : 'Auto-deleted when session ends'}
+                </span>
               </div>
-            </div>
+            </LegalCard>
 
-            <div className="flex items-center gap-3 p-3.5 rounded-xl bg-rose-50/60 border border-rose-200 shadow-2xs">
-              <div className="w-9 h-9 rounded-lg bg-rose-600 flex items-center justify-center text-white shadow-sm">
-                <span className="material-symbols-outlined text-[20px]">shield_with_heart</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[10px] text-rose-900 uppercase font-extrabold tracking-wider">
-                  REVOCATION POLICY
+            <LegalCard variant="muted" className="flex items-center gap-3 p-3.5 shadow-2xs">
+              <span className="material-symbols-outlined text-[20px] text-[#0F766E]">security</span>
+              <div>
+                <span className="text-[11px] font-bold text-[#0F172A] block">
+                  {lang === 'vi' ? 'QUYỀN THU HỒI' : 'REVOCATION CONTROL'}
                 </span>
-                <span className="text-xs text-slate-900 font-extrabold">Survivor Unilateral Killswitch</span>
+                <span className="text-xs text-[#475569] block mt-0.5">
+                  {lang === 'vi' ? 'Thân chủ có thể thu hồi quyền bất kỳ lúc nào' : 'Client can revoke access at any time'}
+                </span>
               </div>
-            </div>
+            </LegalCard>
           </div>
 
-          {/* 5. Footer with Cancel, Escrow Charter & Vibrant Progress Bar */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-200">
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                className="px-4 py-2 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 text-xs font-bold transition-colors flex items-center gap-1.5 border border-slate-300"
-              >
-                <span className="material-symbols-outlined text-[16px]">close</span>
-                <span>Cancel Escrow Request</span>
-              </button>
+          {/* 5. Progress Footer */}
+          <div className="flex items-center justify-between border-t border-[#F1F5F9] pt-4">
+            <span className="text-xs text-[#475569] font-medium">
+              {isApproved 
+                ? (lang === 'vi' ? 'Đã hoàn thành 2/2 chữ ký cần thiết' : '2 of 2 signatures recorded')
+                : (lang === 'vi' ? 'Đang hoàn thành 1/2 chữ ký cần thiết' : '1 of 2 signatures recorded')}
+            </span>
 
-              <button
-                type="button"
-                className="px-3 py-2 text-slate-600 hover:text-slate-900 text-xs font-bold transition-colors flex items-center gap-1"
-              >
-                <span className="material-symbols-outlined text-[16px] text-amber-600">help</span>
-                <span>Escrow Charter</span>
-              </button>
-            </div>
-
-            <div className="flex items-center gap-3 self-end sm:self-auto">
-              <div className="w-32 bg-slate-200 h-2.5 rounded-full overflow-hidden shadow-inner">
-                <div
-                  className={`h-full transition-all duration-500 rounded-full ${
-                    isApproved ? 'bg-emerald-500 w-full' : 'bg-amber-500 w-1/2'
-                  }`}
-                />
-              </div>
-              <span className="text-xs font-extrabold text-[#1E3A8A]">
-                {isApproved ? '2 / 2 Signatures Recorded' : '1 / 2 Signatures Recorded'}
-              </span>
+            <div className="w-32 bg-[#F1F5F9] h-2 rounded-full overflow-hidden">
+              <div
+                className={`h-full transition-all duration-300 rounded-full ${
+                  isApproved ? 'bg-[#0F766E] w-full' : 'bg-[#B45309] w-1/2'
+                }`}
+              />
             </div>
           </div>
 
         </div>
 
-        {/* Bottom Verification Hash Strip */}
-        <div className="p-4 px-8 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-          <div className="flex items-center gap-2 font-mono">
-            <span className="material-symbols-outlined text-[18px] text-[#1E3A8A]">account_balance</span>
-            <span className="text-slate-500 uppercase font-bold">ESCROW VERIFICATION HASH:</span>
-            <span className="text-[#1E3A8A] font-extrabold">TIDE-ESCROW-2026-Q4-00918-BATES-NEXA-002194</span>
-          </div>
-
-          <div className="flex items-center gap-1.5 text-emerald-700 font-bold">
-            <span className="material-symbols-outlined text-[16px]">check_circle</span>
-            <span>Court-Admissible Timestamp Anchor (RFC 3161)</span>
-          </div>
-        </div>
-
-      </div>
+      </LegalCard>
 
     </div>
   );

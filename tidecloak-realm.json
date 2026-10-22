@@ -24,6 +24,12 @@
         "clientRole": false
       },
       {
+        "name": "GUARDIAN",
+        "description": "Court-Appointed Legal Guardian with Protective Quorum Authority",
+        "composite": false,
+        "clientRole": false
+      },
+      {
         "name": "IT_ADMIN",
         "description": "Platform Infrastructure Admin with Zero Data Authority Constraint",
         "composite": false,
@@ -80,6 +86,14 @@
       "firstName": "Jane",
       "lastName": "Doe (Survivor)",
       "realmRoles": ["SURVIVOR_CLIENT"]
+    },
+    {
+      "username": "sarah.jenkins",
+      "enabled": true,
+      "email": "guardian@safeguard.ny.gov",
+      "firstName": "Sarah",
+      "lastName": "Jenkins",
+      "realmRoles": ["GUARDIAN"]
     },
     {
       "username": "alex.mercer",

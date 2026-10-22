@@ -29,16 +29,17 @@ namespace MatterRoom.Forseti.Policies
 
     public class QuorumState
     {
-        public int Threshold { get; set; } = 2;
+        public int Threshold { get; set; } = 3;
         public int SignedCount { get; set; } = 0;
         public string[] RequiredRoles { get; set; } = new string[0];
         public string[] ActiveSignerRoles { get; set; } = new string[0];
+        public bool IsGuardianConflicted { get; set; } = false;
     }
 
     public class MatterRoomQuorumPolicy : IForsetiPolicy
     {
         public const string PolicyContractId = "SDNY-CASE-2026-CV-04421-SURVIVOR-SHIELD";
-        public const string RequiredQuorumThreshold = "2-of-2:SURVIVOR+COUNSEL";
+        public const string RequiredQuorumThreshold = "3-of-3:ALL-KEYHOLDERS(SURVIVOR+COUNSEL+GUARDIAN)";
 
         public bool ValidateDecryptionRequest(CallerContext caller, ResourceContext resource, QuorumState quorum)
         {
@@ -47,41 +48,49 @@ namespace MatterRoom.Forseti.Policies
             // =========================================================================
             // Cloud Infrastructure & Database Sysadmins possess ZERO Data Authority.
             // Tide ORK nodes mathematically refuse ephemeral secret key derivation.
-            if (caller.Role == "IT_ADMIN")
+            if (caller.Role == "IT_ADMIN" || caller.Role == "ADMIN")
             {
                 return false;
             }
 
             // =========================================================================
-            // INVARIANT RULE 2: PUBLIC DISCOVERY COURT ORDER
+            // INVARIANT RULE 2: C0 — OPERATIONAL & PUBLIC COURT DISCOVERY
             // =========================================================================
-            // Unsealed court orders under Discovery rules are readable to all litigation parties.
-            if (resource.Classification == "DISCOVERY")
+            // Operational workflow information and unsealed court documents require no approval.
+            if (resource.Classification == "C0" || resource.Classification == "DISCOVERY")
             {
                 return true;
             }
 
             // =========================================================================
-            // INVARIANT RULE 3: SURVIVOR SOVEREIGNTY & ATTORNEY-CLIENT PRIVILEGE
+            // INVARIANT RULE 3: C1 — CONFIDENTIAL CASE WORK PRODUCT
             // =========================================================================
-            // Sensitive personal timelines, diary entries and safehouse coordinates
-            // are solely decryptable by the survivor herself or her lead legal counsel.
-            if (resource.Classification == "STRICT_PRIVILEGE")
+            // Ordinary case materials are strictly restricted to assigned legal counsel and client.
+            if (resource.Classification == "C1")
             {
-                return caller.Role == "SURVIVOR_CLIENT" || caller.Role == "LEAD_COUNSEL";
+                return caller.Role == "LEAD_COUNSEL" || caller.Role == "SURVIVOR_CLIENT";
             }
 
             // =========================================================================
-            // INVARIANT RULE 4: MULTI-PARTY QUORUM FOR RESTRICTED MEDICAL EVIDENCE
+            // INVARIANT RULE 4: C2 — SENSITIVE EVIDENCE & ALL-KEYHOLDERS QUORUM
             // =========================================================================
-            // Exhibit B (Forensic trauma reports) requires 2-of-2 dual signoff
-            // (Jane Doe + Lead Counsel Elena Howard) before key emergence for Medical Examiners.
-            if (resource.Classification == "RESTRICTED_EXPERT" && caller.Role == "FORENSIC_EXPERT")
+            // Intimate disclosures, medical findings, DNA, and safehouse coordinates
+            // require consensus from ALL keyholders (Client + Counsel + Guardian).
+            // Exception Rule 4: If guardian is implicated in abuse, guardian is excluded (2-of-2).
+            if (resource.Classification == "C2" || resource.Classification == "RESTRICTED_EXPERT" || resource.Classification == "STRICT_PRIVILEGE")
             {
-                bool hasSurvivorSignoff = Array.Exists(quorum.ActiveSignerRoles, r => r == "SURVIVOR_CLIENT");
-                bool hasCounselSignoff = Array.Exists(quorum.ActiveSignerRoles, r => r == "LEAD_COUNSEL");
+                bool hasSurvivor = Array.Exists(quorum.ActiveSignerRoles, r => r == "SURVIVOR_CLIENT");
+                bool hasCounsel = Array.Exists(quorum.ActiveSignerRoles, r => r == "LEAD_COUNSEL");
+                bool hasGuardian = Array.Exists(quorum.ActiveSignerRoles, r => r == "GUARDIAN");
 
-                return hasSurvivorSignoff && hasCounselSignoff && quorum.SignedCount >= 2;
+                // Exception Safeguard: Conflicted Guardian Exclusion
+                if (quorum.IsGuardianConflicted)
+                {
+                    return hasSurvivor && hasCounsel && quorum.SignedCount >= 2;
+                }
+
+                // Standard Sovereign Quorum: All Keyholders consensus
+                return hasSurvivor && hasCounsel && hasGuardian && quorum.SignedCount >= 3;
             }
 
             return false;

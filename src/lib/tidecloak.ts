@@ -76,7 +76,7 @@ export class TideCloakMatterService {
     if (!forsetiEvaluation.allowed) {
       const latencyMs = Math.round(performance.now() - startTime);
 
-      if ((document.dataClass === 'C2' || document.classification === 'RESTRICTED_EXPERT') && currentUser.role === 'FORENSIC_EXPERT') {
+      if (document.dataClass === 'C2' || document.classification === 'RESTRICTED_EXPERT' || document.classification === 'STRICT_PRIVILEGE') {
         const threshold = matchingQuorum?.threshold || 3;
         return {
           success: false,

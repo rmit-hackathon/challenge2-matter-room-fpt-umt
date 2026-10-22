@@ -24,9 +24,9 @@ export const QuorumApprovalsView: React.FC<QuorumApprovalsViewProps> = ({
     id: 'req_01',
     targetDocumentId: 'doc_03',
     targetDocumentTitle: 'Exhibit B: Confidential Forensic Medical Trauma Evaluation & Physical Examination',
-    requestedBy: 'Dr. Miriam Vance, M.D.',
-    requestedFor: 'Medical Evidence for Court Hearing',
-    requestedRole: 'FORENSIC_EXPERT',
+    requestedBy: 'Elena Howard, Esq.',
+    requestedFor: 'In-Camera Judicial Inspection & Trial Submission',
+    requestedRole: 'LEAD_COUNSEL',
     reason: 'Court Protective Order 2026-CV-04421 requires medical verification of bodily injuries.',
     status: 'PENDING',
     approvals: [
@@ -166,10 +166,10 @@ export const QuorumApprovalsView: React.FC<QuorumApprovalsViewProps> = ({
                     {t.beneficiary}
                   </span>
                   <p className="font-semibold text-xs sm:text-sm text-[#0F172A] mt-1 leading-snug">
-                    Dr. Miriam Vance, M.D.
+                    Elena Howard, Esq.
                   </p>
                   <span className="text-xs text-[#475569] mt-0.5 block">
-                    {lang === 'vi' ? 'Bác sĩ Giám định Pháp y Độc lập' : 'Forensic Medical Examiner'}
+                    {lang === 'vi' ? 'Luật sư Trưởng Thụ lý Vụ án' : 'Lead Counsel & Litigator'}
                   </span>
                 </div>
                 <div className="mt-2.5">

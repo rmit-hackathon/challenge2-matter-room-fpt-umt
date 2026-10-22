@@ -208,14 +208,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   u.role === 'LEAD_COUNSEL' ? t.roleCounsel :
                   u.role === 'SURVIVOR_CLIENT' ? t.roleSurvivor :
                   u.role === 'GUARDIAN' ? (lang === 'vi' ? 'Người Giám Hộ' : 'Legal Guardian') :
-                  isItAdmin ? t.roleAdmin :
-                  u.role === 'FORENSIC_EXPERT' ? t.roleExpert : t.roleDefense;
+                  isItAdmin ? t.roleAdmin : t.roleCounsel;
 
                 const roleIcon =
                   u.role === 'LEAD_COUNSEL' ? 'gavel' :
                   u.role === 'SURVIVOR_CLIENT' ? 'shield_person' :
                   u.role === 'GUARDIAN' ? 'handshake' :
-                  isItAdmin ? 'admin_panel_settings' : 'biotech';
+                  isItAdmin ? 'admin_panel_settings' : 'badge';
 
                 return (
                   <button

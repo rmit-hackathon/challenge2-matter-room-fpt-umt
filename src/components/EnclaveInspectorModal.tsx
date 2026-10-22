@@ -211,8 +211,8 @@ export const EnclaveInspectorModal: React.FC<EnclaveInspectorModalProps> = ({ is
                     <p className="text-[#475569] mt-1 text-[11px]">Lời khai riêng tư và nhật ký chỉ mở cho Nạn nhân Jane Doe & Lead Counsel.</p>
                   </LegalCard>
                   <LegalCard variant="surface" className="p-3 shadow-2xs border-[#FEF3C7] bg-[#FFFBEB]/30">
-                    <span className="font-bold text-[#B45309]">Invariant 4: Multi-Party Quorum</span>
-                    <p className="text-[#475569] mt-1 text-[11px]">Hồ sơ y tế Exhibit B yêu cầu đồng thuận 2-of-2 trước khi mở cho Bác sĩ Vance.</p>
+                    <span className="font-bold text-[#B45309]">Invariant 4: All-Keyholders Quorum</span>
+                    <p className="text-[#475569] mt-1 text-[11px]">Chứng cứ niêm phong C2 bắt buộc phải được đồng thuận 3-of-3 từ tất cả các bên giữ khóa (Nạn nhân, Luật sư, Người giám hộ).</p>
                   </LegalCard>
                 </div>
               </div>

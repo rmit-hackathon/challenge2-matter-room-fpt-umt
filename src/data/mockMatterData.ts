@@ -41,16 +41,6 @@ export const MOCK_USERS: Record<string, UserProfile> = {
     avatar: '⚙️',
     hasDataAuthority: false, // ZERO DATA AUTHORITY
     roleDescription: 'Quản trị viên máy chủ. Nắm quyền root hạ tầng nhưng hoàn toàn bị mù toán học trước dữ liệu nạn nhân.'
-  },
-  FORENSIC_EXPERT: {
-    id: 'usr_expert_01',
-    name: 'Bác sĩ pháp y: Dr. Miriam Vance, M.D.',
-    title: 'Bác sĩ Giám định Y khoa Độc lập',
-    organization: 'Institute for Forensic Medical Evidence',
-    role: 'FORENSIC_EXPERT',
-    avatar: '🩺',
-    hasDataAuthority: false,
-    roleDescription: 'Bác sĩ pháp y độc lập. Cần được Nạn nhân, Luật sư và Người giám hộ cùng phê duyệt Quorum All-Keyholders mới có thể giải mã hồ sơ y tế.'
   }
 };
 
@@ -136,7 +126,7 @@ export const MOCK_DOCUMENTS: MatterDocument[] = [
     uploadedAt: '2026-10-17 16:45',
     summary: 'Sổ cái hành trình lưu vết chứng cứ, mã băm SHA-256 và mốc thời gian tiếp nhận vật chứng.',
     encryptedHash: '0x4e2d...8b10 (Ledger Sealed)',
-    decryptedContent: 'EVIDENCE CHAIN-OF-CUSTODY AUDIT LOG:\nItem 01 (Audio): Received 2026-08-15 | Custodian: Elena Howard, Esq.\nItem 02 (Toxicology): Received 2026-08-18 | Custodian: Dr. Miriam Vance, M.D.',
+    decryptedContent: 'EVIDENCE CHAIN-OF-CUSTODY AUDIT LOG:\nItem 01 (Audio): Received 2026-08-15 | Custodian: Elena Howard, Esq.\nItem 02 (Toxicology): Received 2026-08-18 | Custodian: State Forensic Laboratory (Sealed)',
     crudPolicy: {
       canEdit: false,
       canDelete: false,
@@ -256,9 +246,9 @@ export const INITIAL_QUORUM_REQUESTS: QuorumRequest[] = [
     targetDocumentId: 'doc_03',
     targetDocumentTitle: 'Exhibit B: Confidential Forensic Medical Trauma Evaluation & Physical Examination',
     requestedBy: 'Jane Doe (Survivor)',
-    requestedFor: 'Dr. Miriam Vance, M.D. (Forensic Medical Examiner)',
-    requestedRole: 'FORENSIC_EXPERT',
-    reason: 'Cấp quyền cho Bác sĩ pháp y độc lập xem hồ sơ giám định y khoa để nộp báo cáo chuyên môn cho Tòa án.',
+    requestedFor: 'In-Camera Judicial Inspection & Legal Trial Preparation',
+    requestedRole: 'LEAD_COUNSEL',
+    reason: 'Yêu cầu mở niêm phong hồ sơ y khoa C2 phục vụ thẩm tra kín (In-Camera Review) của Tòa án và chuẩn bị tranh tụng.',
     status: 'PENDING',
     approvals: [
       {
@@ -283,7 +273,7 @@ export const INITIAL_AUDIT_LOGS: AuditLogEntry[] = [
     actorName: 'Jane Doe',
     actorRole: 'SURVIVOR_CLIENT',
     status: 'QUORUM_TRIGGERED',
-    details: 'Nạn nhân Jane Doe khởi tạo yêu cầu Quorum All-Keyholders cấp quyền xem Exhibit B cho Bác sĩ Miriam Vance (Đã ký: 1/3).'
+    details: 'Nạn nhân Jane Doe khởi tạo yêu cầu Quorum All-Keyholders mở niêm phong chứng cứ C2 Exhibit B (Đã ký: 1/3).'
   },
   {
     id: 'log_02',

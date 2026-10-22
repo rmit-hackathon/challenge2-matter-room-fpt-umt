@@ -36,12 +36,6 @@
         "clientRole": false
       },
       {
-        "name": "FORENSIC_EXPERT",
-        "description": "Court-Appointed Forensic Examiner requiring 2-of-2 Quorum Access",
-        "composite": false,
-        "clientRole": false
-      },
-      {
         "name": "OPPOSING_COUNSEL",
         "description": "Corporate Defense Litigator restricted strictly to Public Discovery orders",
         "composite": false,
@@ -102,14 +96,6 @@
       "firstName": "Alex",
       "lastName": "Mercer",
       "realmRoles": ["IT_ADMIN"]
-    },
-    {
-      "username": "dr.miriam.vance",
-      "enabled": true,
-      "email": "dr.vance@forensicmed.org",
-      "firstName": "Dr. Miriam",
-      "lastName": "Vance, M.D.",
-      "realmRoles": ["FORENSIC_EXPERT"]
     },
     {
       "username": "richard.sterling",

@@ -117,11 +117,11 @@ export const App: React.FC = () => {
       return;
     }
 
-    // Stakeholders requesting sensitive Level 3 / C2 docs must authenticate (Biometric + Scope agreement)
+    // Lead Counsel requesting sensitive C2 sealed evidence can perform fast enclave authentication
     const isRestrictedLevel = doc.dataClass === 'C2' || doc.securityLevel === 'LEVEL_3_HIGHLY_SENSITIVE' || doc.securityLevel === 'LEVEL_4_CRITICAL';
-    const isStakeholder = currentUser.role === 'FORENSIC_EXPERT';
+    const isKeyholder = currentUser.role === 'LEAD_COUNSEL';
 
-    if (isRestrictedLevel && isStakeholder) {
+    if (isRestrictedLevel && isKeyholder) {
       setPendingAuthDoc(doc);
       setIsAuthModalOpen(true);
       return;

@@ -284,8 +284,8 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                 const shortLabel =
                   u.role === 'LEAD_COUNSEL' ? t.roleCounsel :
                   u.role === 'SURVIVOR_CLIENT' ? t.roleSurvivor :
-                  isItAdmin ? t.roleAdmin :
-                  u.role === 'FORENSIC_EXPERT' ? t.roleExpert : t.roleDefense;
+                  u.role === 'GUARDIAN' ? (lang === 'vi' ? 'Người Giám Hộ' : 'Legal Guardian') :
+                  isItAdmin ? t.roleAdmin : t.roleCounsel;
 
                 return (
                   <button

@@ -31,11 +31,12 @@ export const Navbar: React.FC<NavbarProps> = ({
   const roleAvatarIcon =
     currentUser.role === 'LEAD_COUNSEL' ? 'gavel' :
     currentUser.role === 'SURVIVOR_CLIENT' ? 'shield_person' :
-    isAdmin ? 'admin_panel_settings' : 'biotech';
+    currentUser.role === 'GUARDIAN' ? 'handshake' :
+    isAdmin ? 'admin_panel_settings' : 'shield';
 
   // Format clean name: eliminate prefixes like "Luật sư: ", "Admin: " to prevent duplicate labels
   const cleanName = currentUser.name
-    .replace(/^(Luật sư|Nạn nhân|Admin|Bác sĩ pháp y):\s*/i, '')
+    .replace(/^(Luật sư|Nạn nhân|Admin|Người giám hộ):\s*/i, '')
     .split(' (')[0];
 
   return (

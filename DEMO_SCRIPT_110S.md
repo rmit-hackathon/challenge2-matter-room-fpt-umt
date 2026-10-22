@@ -54,12 +54,12 @@ timeline
   * Chuyển Persona sang **Elena Howard, Esq. (Lead Counsel)** $\rightarrow$ Mở tab **Quorum Approvals**, bấm nút **"Ký duyệt (Sign as Counsel)"** (2/3 chữ ký).
   * Chuyển Persona sang **Sarah Jenkins (Legal Guardian)** $\rightarrow$ Bấm nút **"Ký duyệt (Sign as Guardian)"**.
   * Ngay lập tức trạng thái Quorum chuyển sang huy hiệu xanh ngọc: **APPROVED (3/3 All Keyholders Signed)**!
-  * Chuyển Persona sang **Dr. Miriam Vance (Forensic Expert)** $\rightarrow$ Bấm mở **Exhibit B: Forensic Medical Trauma Evaluation**.
+  * Quay lại bảng Evidence Matrix $\rightarrow$ Nút giải mã chuyển sang màu xanh ngọc **"Giải mã WebCrypto"** $\rightarrow$ Bấm mở **Exhibit B: Confidential Forensic Medical Trauma Evaluation**.
   * Modal giải mã xanh ngọc bung ra sau **12 mili-giây**, hiển thị nội dung y khoa, huy hiệu WebCrypto AES-256-GCM, và đồng hồ đếm ngược tự hủy khóa phiên (Burn Key Timer).
 * **Lời thoại tiếng Anh:**
-  > *"Now, to grant access to independent forensic examiner Dr. Miriam Vance, our 3 Keyholders must reach consensus. Lead Counsel Elena Howard reviews and signs the request. Then, court-appointed Guardian Sarah Jenkins executes her signature. With all 3 keyholders verified—Survivor, Counsel, and Guardian—the 3-of-3 threshold is fulfilled. Switching back to Dr. Vance, her browser synthesizes the ephemeral key and decrypts Exhibit B in just 12 milliseconds using native client-side WebCrypto AES-256-GCM."*
+  > *"To unseal sensitive C2 evidence for court submission, all 3 Keyholders must reach consensus. Lead Counsel Elena Howard reviews and signs the request. Then, court-appointed Guardian Sarah Jenkins executes her signature. With all 3 keyholders verified—Survivor, Counsel, and Guardian—the 3-of-3 threshold is fulfilled. Counsel Elena can now synthesize the ephemeral key and decrypt Exhibit B in just 12 milliseconds using native client-side WebCrypto AES-256-GCM."*
 * **Bản dịch tiếng Việt:**
-  > *"Để cấp quyền cho bác sĩ pháp y độc lập Dr. Miriam Vance, cả 3 Bên giữ khóa phải đồng thuận. Luật sư trưởng Elena Howard xem xét và ký duyệt. Kế tiếp, Người giám hộ Sarah Jenkins ký xác nhận. Khi đủ cả 3 bên—Nạn nhân, Luật sư và Người giám hộ—ngưỡng 3/3 được kích hoạt. Chuyển lại về Bác sĩ Vance, trình duyệt tự tổng hợp khóa phiên và giải mã thành công Exhibit B chỉ trong 12 mili-giây bằng WebCrypto AES-256-GCM."*
+  > *"Để mở niêm phong chứng cứ C2 phục vụ nộp Tòa án, cả 3 Bên giữ khóa phải đồng thuận. Luật sư trưởng Elena Howard xem xét và ký duyệt. Kế tiếp, Người giám hộ Sarah Jenkins ký xác nhận. Khi đủ cả 3 bên—Nạn nhân, Luật sư và Người giám hộ—ngưỡng 3/3 được kích hoạt. Luật sư Elena giờ đây có thể tự tổng hợp khóa phiên và giải mã thành công Exhibit B chỉ trong 12 mili-giây bằng WebCrypto AES-256-GCM."*
 
 ---
 

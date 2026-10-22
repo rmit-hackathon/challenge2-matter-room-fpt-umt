@@ -2,7 +2,6 @@ export type UserRole =
   | 'LEAD_COUNSEL' 
   | 'SURVIVOR_CLIENT' 
   | 'GUARDIAN'
-  | 'FORENSIC_EXPERT' 
   | 'ADMIN' 
   | 'IT_ADMIN';
 

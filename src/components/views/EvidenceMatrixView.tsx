@@ -481,7 +481,7 @@ export const EvidenceMatrixView: React.FC<EvidenceMatrixViewProps> = ({
                           <span className="material-symbols-outlined text-[15px]">lock_open</span>
                           <span>{lang === 'vi' ? 'Thử giải mã (Admin)' : 'Attempt Decrypt'}</span>
                         </button>
-                      ) : currentUser.role === 'FORENSIC_EXPERT' && isC2 ? (
+                      ) : isC2 ? (
                         quorumStatus?.isApproved ? (
                           <button
                             onClick={() => onOpenDocument(doc)}
@@ -489,7 +489,7 @@ export const EvidenceMatrixView: React.FC<EvidenceMatrixViewProps> = ({
                             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition shadow-2xs text-white bg-[#0F766E] hover:bg-[#0D9488] cursor-pointer active:scale-[0.98]"
                           >
                             <span className="material-symbols-outlined text-[15px]">key</span>
-                            <span>{lang === 'vi' ? 'Giải mã y khoa (WebCrypto)' : 'Decrypt Exhibit B'}</span>
+                            <span>{lang === 'vi' ? 'Giải mã WebCrypto' : 'Decrypt (Quorum Met)'}</span>
                           </button>
                         ) : (
                           <button

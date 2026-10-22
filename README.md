@@ -75,7 +75,7 @@ chmod +x scripts/run_tidecloak.sh
    - Switch persona to **Elena Howard, Esq. (Lead Counsel)** or **Sarah Jenkins (Legal Guardian)**.
    - Navigate to the **Quorum Approvals** tab.
    - Click **Sign to Authorize** to add cryptographic signatures towards the threshold.
-   - Switch to **Dr. Miriam Vance (Forensic Expert)** and decrypt *Exhibit B* to view the authentic forensic medical report.
+   - As **Elena Howard, Esq. (Lead Counsel)**, decrypt *Exhibit B* in 12ms via WebCrypto AES-GCM to view the authentic forensic medical report.
 
 3. **Exception Safeguard Engine (Guardian Conflict Safeguard):**
    - Click **Simulate Exceptions** in the navigation bar.
